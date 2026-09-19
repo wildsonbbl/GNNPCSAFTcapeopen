@@ -74,7 +74,10 @@ class GNNPCSAFTPropertyPackage(COMObject):
     def __init__(self):
         super().__init__()
         self.name = "GNNPCSAFT Property Package"
-        self.description = "Implementação GNNPCSAFT via comtypes"
+        self.description = (
+            "PC-SAFT Thermodynamic Property Package"
+            " with Graph Neural Network estimated parameters"
+        )
         self.material = None
 
     # --- ICapeIdentification ---
