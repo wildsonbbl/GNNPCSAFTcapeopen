@@ -27,6 +27,7 @@ from comtypes import (
 )
 from comtypes.automation import VARIANT, VT_ARRAY, VT_BSTR, VT_R8
 from comtypes.client import GetModule
+from comtypes.server.register import UseCommandLine
 
 # 1. Importar/Gerar as interfaces do CAPE-OPEN v1.1 a partir do TypeLib oficial
 try:
@@ -124,7 +125,6 @@ def unregister_capeopen_category():
 
 
 if __name__ == "__main__":
-    from comtypes.server.register import UseCommandLine
 
     if "-regserver" in sys.argv:
         UseCommandLine(GNNPCSAFTPropertyPackage)
