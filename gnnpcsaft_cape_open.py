@@ -28,8 +28,6 @@ from comtypes import (
 from comtypes.automation import VARIANT, VT_ARRAY, VT_BSTR, VT_R8
 from comtypes.client import GetModule
 
-import interfaces
-
 # 1. Importar/Gerar as interfaces do CAPE-OPEN v1.1 a partir do TypeLib oficial
 try:
 
@@ -40,6 +38,7 @@ except Exception as e:
         "Type Library do CAPE-OPEN v1.1 não encontrada no sistema."
     ) from e
 
+import interfaces
 
 CLSID = "{A3F10E65-3852-4C10-9D45-6B9A8C110001}"
 PROGID = "wildsonbbl.gnnpcsaftPP"
