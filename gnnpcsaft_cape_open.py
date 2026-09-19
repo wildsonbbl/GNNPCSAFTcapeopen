@@ -25,6 +25,7 @@ from comtypes import (
     COMObject,
     IUnknown,
 )
+from comtypes.automation import VARIANT, VT_ARRAY, VT_BSTR
 from comtypes.client import GetModule
 
 # 1. Importar/Gerar as interfaces do CAPE-OPEN v1.1 a partir do TypeLib oficial
@@ -98,7 +99,11 @@ class GNNPCSAFTPropertyPackage(COMObject):
 
     # --- ICapeThermoPropertyRoutine ---
     def ICapeThermoPropertyRoutine_GetSinglePhasePropList(self):
-        return ["enthalpy", "density", "compressibilityFactor"]
+
+        variant_array = VARIANT(
+            VT_ARRAY | VT_BSTR, ["enthalpy", "compressibilityFactor", "density"]
+        )
+        return variant_array
 
     def ICapeThermoPropertyRoutine_CalcSinglePhaseProp(self, props, phaseLabel):
         if not self.material:
