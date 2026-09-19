@@ -25,7 +25,6 @@ from comtypes import (
     COMObject,
     IUnknown,
 )
-from comtypes.automation import VARIANT, VT_ARRAY, VT_BSTR, VT_R8
 from comtypes.client import GetModule
 from comtypes.server.register import UseCommandLine
 
@@ -81,6 +80,7 @@ class GNNPCSAFTPropertyPackage(
 
 # 3. Função para registar a Categoria CAPE-OPEN v1.1 no Windows Registry
 def register_capeopen_category():
+    "Register CO ProgId, Category and Metadata"
     # CAPE-OPEN v1.1 Thermo Property Package Category
 
     # 1. Register ProgID -> CLSID mapping explicitly
@@ -110,6 +110,7 @@ def register_capeopen_category():
 
 
 def unregister_capeopen_category():
+    "Unregister CO ProgId, Category and Metadata"
     try:
         winreg.DeleteKey(
             winreg.HKEY_CLASSES_ROOT,
