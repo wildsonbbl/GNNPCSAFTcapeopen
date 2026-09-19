@@ -25,28 +25,21 @@ from comtypes import (
     COMObject,
     IUnknown,
 )
-from comtypes.automation import VARIANT, VT_ARRAY, VT_BSTR
+from comtypes.automation import VARIANT, VT_ARRAY, VT_BSTR, VT_R8
 from comtypes.client import GetModule
+
+import interfaces
 
 # 1. Importar/Gerar as interfaces do CAPE-OPEN v1.1 a partir do TypeLib oficial
 try:
 
     GetModule("CAPE-OPENv1-1-0.tlb")
-    from comtypes.gen.CAPEOPEN110 import (
-        ICapeIdentification,
-        ICapeThermoCompounds,
-        ICapeThermoEquilibriumRoutine,
-        ICapeThermoMaterialContext,
-        ICapeThermoPhases,
-        ICapeThermoPropertyRoutine,
-        ICapeThermoUniversalConstant,
-    )
+    from comtypes.gen import CAPEOPEN110
 except Exception as e:
     raise RuntimeError(
         "Type Library do CAPE-OPEN v1.1 não encontrada no sistema."
     ) from e
 
-# pylint: disable=c0115,c0116,c0103
 
 CLSID = "{A3F10E65-3852-4C10-9D45-6B9A8C110001}"
 PROGID = "wildsonbbl.gnnpcsaftPP"
@@ -54,20 +47,31 @@ CATEGORY_ID = "{CF51E384-0110-4ed8-ACB7-B50CFDE6908E}"
 
 
 # 2. Definir o Property Package
-class GNNPCSAFTPropertyPackage(COMObject):
+class GNNPCSAFTPropertyPackage(
+    COMObject,
+    interfaces.ICapeIdentification,
+    interfaces.ICapeThermoMaterialContext,
+    interfaces.ICapeThermoCompounds,
+    interfaces.ICapeThermoPropertyRoutine,
+    interfaces.ICapeThermoEquilibriumRoutine,
+    interfaces.ICapeThermoPhases,
+    interfaces.ICapeThermoUniversalConstant,
+):
+    "GNNPCSAFTPropertyPackage"
+
     _reg_clsid_ = GUID(CLSID)
     _reg_progid_ = PROGID
     _reg_desc_ = "GNNPCSAFT Property Package"
     _reg_clsctx_ = CLSCTX_INPROC_SERVER
 
     _com_interfaces_ = [
-        ICapeIdentification,
-        ICapeThermoPropertyRoutine,
-        ICapeThermoMaterialContext,
-        ICapeThermoCompounds,
-        ICapeThermoPhases,
-        ICapeThermoEquilibriumRoutine,
-        ICapeThermoUniversalConstant,
+        CAPEOPEN110.ICapeIdentification,
+        CAPEOPEN110.ICapeThermoPropertyRoutine,
+        CAPEOPEN110.ICapeThermoMaterialContext,
+        CAPEOPEN110.ICapeThermoCompounds,
+        CAPEOPEN110.ICapeThermoPhases,
+        CAPEOPEN110.ICapeThermoEquilibriumRoutine,
+        CAPEOPEN110.ICapeThermoUniversalConstant,
         IUnknown,
     ]
 
@@ -79,41 +83,6 @@ class GNNPCSAFTPropertyPackage(COMObject):
             " with Graph Neural Network estimated parameters"
         )
         self.material = None
-
-    # --- ICapeIdentification ---
-    def ICapeIdentification_get_ComponentName(self):
-        return self.name
-
-    def ICapeIdentification_put_ComponentName(self, name):
-        self.name = name
-
-    def ICapeIdentification_get_ComponentDescription(self):
-        return self.description
-
-    def ICapeIdentification_put_ComponentDescription(self, desc):
-        self.description = desc
-
-    # --- ICapeThermoMaterialContext ---
-    def ICapeThermoMaterialContext_SetMaterial(self, material):
-        self.material = material
-
-    def ICapeThermoMaterialContext_UnsetMaterial(self):
-        self.material = None
-
-    # --- ICapeThermoPropertyRoutine ---
-    def ICapeThermoPropertyRoutine_GetSinglePhasePropList(self):
-
-        variant_array = VARIANT(
-            VT_ARRAY | VT_BSTR, ["enthalpy", "compressibilityFactor", "density"]
-        )
-        return variant_array
-
-    def ICapeThermoPropertyRoutine_CalcSinglePhaseProp(self, props, phaseLabel):
-        if not self.material:
-            raise Exception(
-                f"Material não atribuído. props: {props}. phaseLable: {phaseLabel}"
-            )
-        # Cálculo das propriedades PC-SAFT aqui...
 
 
 # 3. Função para registar a Categoria CAPE-OPEN v1.1 no Windows Registry
