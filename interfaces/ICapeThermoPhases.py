@@ -1,7 +1,10 @@
 "ICapeThermoPhases"
 
+from .utils_common import bstr_array_variant
+
 
 class ICapeThermoPhases:
+    "ICapeThermoPhases Class with methods implemented"
 
     # --- ICapeThermoPhases ---
     def ICapeThermoPhases_GetNumPhases(self):
@@ -13,7 +16,7 @@ class ICapeThermoPhases:
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown.
         """
-        # TODO: retornar o número de fases suportadas aqui...
+        return 2
 
     def ICapeThermoPhases_GetPhaseInfo(self, phaseLabel, phaseAttribute):
         """
@@ -32,9 +35,33 @@ class ICapeThermoPhases:
 
         Raises (per spec): ECapeNoImpl, ECapeInvalidArgument, ECapeUnknown.
         """
-        # TODO: retornar o atributo solicitado da fase aqui...
 
-    def ICapeThermoPhases_GetPhaseList(self):
+        result = {
+            "1": {
+                "StateOfAggregation": "Liquid",
+                "KeyCompoundId": "UNDEFINED",
+                "ExcludedCompoundId": "UNDEFINED",
+                "DensityDescription": "Heavy",
+                "UserDescription": "Liquid phase",
+                "TypeOfSolid": "UNDEFINED",
+            },
+            "2": {
+                "StateOfAggregation": "Vapor",
+                "KeyCompoundId": "UNDEFINED",
+                "ExcludedCompoundId": "UNDEFINED",
+                "DensityDescription": "Light",
+                "UserDescription": "Gas phase",
+                "TypeOfSolid": "UNDEFINED",
+            },
+        }
+
+        if phaseLabel in result and phaseAttribute in result[phaseLabel]:
+            return result[phaseLabel][phaseAttribute]
+        return "UNDEFINED"
+
+    def ICapeThermoPhases_GetPhaseList(
+        self, phaseLabels, stateOfAggregation, keyCompoundId
+    ):
         """
         Returns Phase labels and other important descriptive information for
         all the Phases supported.
@@ -44,4 +71,10 @@ class ICapeThermoPhases:
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown.
         """
-        # TODO: montar a lista de fases suportadas aqui...
+
+        phaseLabels, stateOfAggregation, keyCompoundId = (
+            bstr_array_variant(["1", "2"]),
+            bstr_array_variant(["Liquid", "Vapor"]),
+            bstr_array_variant(["UNDEFINED", "UNDEFINED"]),
+        )
+        return phaseLabels, stateOfAggregation, keyCompoundId
