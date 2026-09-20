@@ -1,10 +1,20 @@
 "ICapeThermoCompounds"
 
-from .utils_common import bstr_array_variant, r8_array_variant
+from typing import List
+
+from .ICapeExceptions import (
+    ECapeInvalidArgument,
+    ECapeThrmPropertyNotAvailable,
+)
+from .utils_common import _require_components, bstr_array_variant, r8_array_variant
 
 
 class ICapeThermoCompounds:
     "ICapeThermoCompounds Class with methods implemented"
+
+    components_smiles: List[str]
+    pcsaft_parameters: List[List[float]]
+    _kij_matrix = List[List[float]]
 
     # --- ICapeThermoCompounds ---
     def ICapeThermoCompounds_GetCompoundConstant(self, props, compIds):
@@ -29,6 +39,27 @@ class ICapeThermoCompounds:
         """
         # TODO: buscar/calcular as constantes dos compostos aqui...
 
+        _require_components(self)
+        requested_props = [str(p) for p in self._as_list(props)]
+        indices = self._compound_indices(compIds)
+        missing = False
+        propvals: List[float] = []
+        for prop in requested_props:
+            key = prop.strip().lower()
+            for idx in indices:
+                if key == "molecularweight":
+                    propvals.append(self.pcsaft_parameters[idx][8])
+                else:
+                    propvals.append(float("nan"))
+                    missing = True
+        if missing:
+            # Still return what we have, but flag it as CAPE-OPEN requires.
+            raise ECapeThrmPropertyNotAvailable(
+                "One or more requested compound constants are not available;"
+                " only 'molecularWeight' is supported by this Property Package"
+            )
+        return propvals
+
     def ICapeThermoCompounds_GetCompoundList(
         self, compIds, formulae, names, boilTemps, molwts, casnos
     ):
@@ -41,16 +72,19 @@ class ICapeThermoCompounds:
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        # TODO: montar a lista de compostos suportados aqui...
+        # TODO: set up formulae, boiltemps and casnos...
+
+        _require_components(self)
 
         compIds, formulae, names, boilTemps, molwts, casnos = (
-            bstr_array_variant(["0", "1"]),
-            bstr_array_variant(["H2O", "C2H6O"]),
-            bstr_array_variant(["Water", "Ethanol"]),
-            r8_array_variant([373.15, 351.5]),
-            r8_array_variant([18.015, 46.07]),
-            bstr_array_variant(["7732-18-5", "64-17-5"]),
+            bstr_array_variant(self.components_smiles),
+            bstr_array_variant(["UNDEFINED"] * len(self.components_smiles)),
+            bstr_array_variant(self.components_smiles),
+            r8_array_variant([float("nan")] * len(self.components_smiles)),
+            r8_array_variant([parameters[8] for parameters in self.pcsaft_parameters]),
+            bstr_array_variant(["UNDEFINED"] * len(self.components_smiles)),
         )
+
         return compIds, formulae, names, boilTemps, molwts, casnos
 
     def ICapeThermoCompounds_GetConstPropList(self):
@@ -63,7 +97,9 @@ class ICapeThermoCompounds:
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        # TODO: listar as propriedades constantes suportadas aqui...
+        # TODO: listar mais propriedades constantes suportadas aqui...
+        _require_components(self)
+        return bstr_array_variant(["molecularWeight"])
 
     def ICapeThermoCompounds_GetNumCompounds(self):
         """
@@ -74,7 +110,8 @@ class ICapeThermoCompounds:
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        # TODO: retornar o número de compostos suportados aqui...
+        _require_components(self)
+        return len(self.components_smiles)
 
     def ICapeThermoCompounds_GetPDependentProperty(self, props, pressure, compIds):
         """
@@ -97,6 +134,10 @@ class ICapeThermoCompounds:
         """
         # TODO: calcular as propriedades dependentes de pressão aqui...
 
+        return r8_array_variant(
+            [float("nan")] * len(self.components_smiles * len(props))
+        )
+
     def ICapeThermoCompounds_GetPDependentPropList(self):
         """
         Returns the list of supported pressure-dependent properties (i.e.
@@ -108,6 +149,8 @@ class ICapeThermoCompounds:
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
         # TODO: listar as propriedades dependentes de pressão suportadas aqui...
+
+        return bstr_array_variant(["UNDEFINED"])
 
     def ICapeThermoCompounds_GetTDependentProperty(self, props, temperature, compIds):
         """
@@ -129,6 +172,9 @@ class ICapeThermoCompounds:
             ECapeThrmPropertyNotAvailable, ECapeUnknown, ECapeBadInvOrder.
         """
         # TODO: calcular as propriedades dependentes de temperatura aqui...
+        return r8_array_variant(
+            [float("nan")] * len(self.components_smiles * len(props))
+        )
 
     def ICapeThermoCompounds_GetTDependentPropList(self):
         """
@@ -141,3 +187,25 @@ class ICapeThermoCompounds:
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
         # TODO: listar as propriedades dependentes de temperatura suportadas aqui...
+
+        return bstr_array_variant(["UNDEFINED"])
+
+    def _compound_indices(self, compIds):
+        if compIds is None:
+            return list(range(len(self.components_smiles)))
+        lower_names = [n.lower() for n in self.components_smiles]
+        indices = []
+        for cid in self._as_list(compIds):
+            try:
+                indices.append(lower_names.index(str(cid).lower()))
+            except ValueError as exc:
+                raise ECapeInvalidArgument(
+                    f"Unrecognised compound identifier: {cid!r}"
+                ) from exc
+        return indices
+
+    @staticmethod
+    def _as_list(value):
+        if value is None:
+            return []
+        return list(value) if isinstance(value, (list, tuple)) else [value]
