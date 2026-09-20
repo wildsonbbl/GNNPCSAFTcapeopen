@@ -1,7 +1,10 @@
 "ICapeThermoCompounds"
 
+from .utils_common import bstr_array_variant, r8_array_variant
+
 
 class ICapeThermoCompounds:
+    "ICapeThermoCompounds Class with methods implemented"
 
     # --- ICapeThermoCompounds ---
     def ICapeThermoCompounds_GetCompoundConstant(self, props, compIds):
@@ -26,7 +29,9 @@ class ICapeThermoCompounds:
         """
         # TODO: buscar/calcular as constantes dos compostos aqui...
 
-    def ICapeThermoCompounds_GetCompoundList(self):
+    def ICapeThermoCompounds_GetCompoundList(
+        self, _comp_ids, _formulae, _names, _boil_temps, _molwts, _casnos
+    ):
         """
         Returns the list of all Compounds, with identifiers and additional
         identifying information.
@@ -37,6 +42,15 @@ class ICapeThermoCompounds:
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
         # TODO: montar a lista de compostos suportados aqui...
+
+        return (
+            bstr_array_variant(["0", "1"]),
+            bstr_array_variant(["H2O", "C2H6O"]),
+            bstr_array_variant(["Water", "Ethanol"]),
+            r8_array_variant([373.15, 351.5]),
+            r8_array_variant([18.015, 46.07]),
+            bstr_array_variant(["7732-18-5", "64-17-5"]),
+        )
 
     def ICapeThermoCompounds_GetConstPropList(self):
         """
