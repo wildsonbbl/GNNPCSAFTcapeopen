@@ -18,6 +18,7 @@ Property Package is expected to implement both.
 
 import sys
 import winreg
+from typing import Iterable, Sequence
 
 from comtypes import (
     CLSCTX_INPROC_SERVER,
@@ -38,7 +39,11 @@ except Exception as e:
         "Type Library do CAPE-OPEN v1.1 não encontrada no sistema."
     ) from e
 
+from gnnepcsaft_mcp_server.utils import predict_pcsaft_parameters
+
 import interfaces
+from interfaces.ICapeExceptions import ECapeInvalidArgument
+from interfaces.utils_common import _require_components
 
 CLSID = "{A3F10E65-3852-4C10-9D45-6B9A8C110001}"
 PROGID = "wildsonbbl.gnnpcsaftPP"
@@ -67,6 +72,37 @@ class GNNPCSAFTPropertyPackage(
         CAPEOPEN110.ICapeThermoUniversalConstant,
         IUnknown,
     ]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.SetComponents(["O", "CCO"])
+
+    def SetComponents(self, components_smiles: Iterable[str]):
+        """Configure the fixed set of compounds this Property Package supports.
+
+        Call this once, before registering/using the object as a CAPE-OPEN
+        server. It plays the role that a proper ICapeUtilities-driven
+        compound-selection dialog would play in a full implementation.
+        """
+        components_smiles = [str(smiles) for smiles in components_smiles]
+        if not components_smiles:
+            raise ECapeInvalidArgument("At least one component is required")
+        self.components_smiles = components_smiles
+        self.pcsaft_parameters = [
+            predict_pcsaft_parameters(smiles) for smiles in components_smiles
+        ]
+        self._kij_matrix = [[0.0] * len(components_smiles) for _ in components_smiles]
+
+    def SetKijMatrix(self, kij_matrix: Sequence[Sequence[float]]):
+        "Set kij matrix"
+        _require_components(self)
+        matrix = [list(map(float, row)) for row in kij_matrix]
+        size = len(self.pcsaft_parameters)
+        if len(matrix) != size or any(len(row) != size for row in matrix):
+            raise ECapeInvalidArgument(
+                "kij_matrix must be a square matrix matching the components"
+            )
+        self._kij_matrix = matrix
 
 
 # 3. Função para registar a Categoria CAPE-OPEN v1.1 no Windows Registry
