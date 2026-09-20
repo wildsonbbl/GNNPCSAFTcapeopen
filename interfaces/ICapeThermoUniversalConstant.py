@@ -1,7 +1,19 @@
 "ICapeThermoUniversalConstant"
 
+from .ICapeExceptions import ECapeInvalidArgument
+
+_UNIVERSAL_CONSTANTS = {
+    "avogadroConstant": 6.0221419947e23,
+    "boltzmannConstant": 1.380650324e-23,
+    "idealGasStateReferencePressure": 101325.0,
+    "molarGasConstant": 8.31447215,
+    "speedOfLightInVacuum": 2.99792458e8,
+    "standardAccelerationOfGravity": 9.80665,
+}
+
 
 class ICapeThermoUniversalConstant:
+    "ICapeThermoUniversalConstant Class with methods implemented"
 
     # --- ICapeThermoUniversalConstant ---
     def ICapeThermoUniversalConstant_GetUniversalConstant(self, constantId):
@@ -20,7 +32,11 @@ class ICapeThermoUniversalConstant:
 
         Raises (per spec): ECapeNoImpl, ECapeInvalidArgument, ECapeUnknown.
         """
-        # TODO: retornar o valor da constante universal solicitada aqui...
+        if constantId in _UNIVERSAL_CONSTANTS:
+            return _UNIVERSAL_CONSTANTS[constantId]
+        raise ECapeInvalidArgument(
+            f"Unknown universal constant identifier: {constantId!r}"
+        )
 
     def ICapeThermoUniversalConstant_GetUniversalConstantList(self):
         """
@@ -31,4 +47,4 @@ class ICapeThermoUniversalConstant:
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown.
         """
-        # TODO: listar as constantes universais suportadas aqui...
+        return list(_UNIVERSAL_CONSTANTS)
