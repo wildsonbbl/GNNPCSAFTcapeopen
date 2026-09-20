@@ -30,7 +30,7 @@ class ICapeThermoCompounds:
         # TODO: buscar/calcular as constantes dos compostos aqui...
 
     def ICapeThermoCompounds_GetCompoundList(
-        self, _comp_ids, _formulae, _names, _boil_temps, _molwts, _casnos
+        self, compIds, formulae, names, boilTemps, molwts, casnos
     ):
         """
         Returns the list of all Compounds, with identifiers and additional
@@ -43,7 +43,7 @@ class ICapeThermoCompounds:
         """
         # TODO: montar a lista de compostos suportados aqui...
 
-        return (
+        compIds, formulae, names, boilTemps, molwts, casnos = (
             bstr_array_variant(["0", "1"]),
             bstr_array_variant(["H2O", "C2H6O"]),
             bstr_array_variant(["Water", "Ethanol"]),
@@ -51,6 +51,7 @@ class ICapeThermoCompounds:
             r8_array_variant([18.015, 46.07]),
             bstr_array_variant(["7732-18-5", "64-17-5"]),
         )
+        return compIds, formulae, names, boilTemps, molwts, casnos
 
     def ICapeThermoCompounds_GetConstPropList(self):
         """
