@@ -68,15 +68,6 @@ class GNNPCSAFTPropertyPackage(
         IUnknown,
     ]
 
-    def __init__(self):
-        super().__init__()
-        self.name = "GNNPCSAFT Property Package"
-        self.description = (
-            "PC-SAFT Thermodynamic Property Package"
-            " with Graph Neural Network estimated parameters"
-        )
-        self.material = None
-
 
 # 3. Função para registar a Categoria CAPE-OPEN v1.1 no Windows Registry
 def register_capeopen_category():

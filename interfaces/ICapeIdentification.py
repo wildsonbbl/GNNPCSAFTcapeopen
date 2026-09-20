@@ -1,17 +1,9 @@
 "ICapeIdentification"
 
 
-class ICapeIdentification:
+class ICapeIdentification:  # pylint: disable = too-few-public-methods
+    "ICapeIdentification Class with methods implemented"
 
-    # --- ICapeIdentification ---
-    def ICapeIdentification_GetComponentName(self):
-        return self.name
-
-    def ICapeIdentification_SetComponentName(self, name):
-        self.name = name
-
-    def ICapeIdentification_GetComponentDescription(self):
-        return self.description
-
-    def ICapeIdentification_SetComponentDescription(self, desc):
-        self.description = desc
+    ComponentName = "GNNPCSAFT Property Package"
+    ComponentDescription = "PC-SAFT Property Package with GNN-estimated parameters"
+    material = None
