@@ -1,5 +1,6 @@
 "Module with all interfaces class with implemented methods"
 
+from .ecape_user import ECapeUserImpl
 from .ICapeIdentification import ICapeIdentification
 from .ICapeThermoCompounds import ICapeThermoCompounds
 from .ICapeThermoEquilibriumRoutine import ICapeThermoEquilibriumRoutine
@@ -17,6 +18,7 @@ class PropertyPackage(
     ICapeThermoEquilibriumRoutine,
     ICapeThermoPhases,
     ICapeThermoUniversalConstant,
+    ECapeUserImpl,
 ):
     """Cape-Open Property Package"""
 
