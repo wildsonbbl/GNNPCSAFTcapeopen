@@ -97,7 +97,7 @@ class GNNPCSAFTPropertyPackage(
 
     def SetKijMatrix(self, kij_matrix: Sequence[Sequence[float]]):
         "Set kij matrix"
-        self._require_components()
+        self._require_components(interfaceName="", operation="SetKijMatrix")
         matrix = [list(map(float, row)) for row in kij_matrix]
         size = len(self.pcsaft_parameters) if self.pcsaft_parameters else 0
         if len(matrix) != size or any(len(row) != size for row in matrix):

@@ -12,7 +12,6 @@ from comtypes.safearray import _midlSAFEARRAY
 
 from . import ecape_errors
 from .ecape_user import ECapeUser
-from .ICapeExceptions import ECapeBadInvOrder
 
 _SMILES_CHAR_RE = re.compile(r"^[A-Za-z0-9@+\-\[\]\(\)=#\\/%.:*$]+$")
 
@@ -39,20 +38,39 @@ class GNNPCSAFTPPbase(ECapeUser):
         r8_array = VARIANT(sa)
         return r8_array
 
-    def _require_components(self):
-        if not self.pcsaft_parameters:
-            self.raise_cape_error(
-                error_cls=ecape_errors.ECapeBadInvOrder,
-                message="GNNPCSAFT Property Package requires initialization",
+    def _require_components(self, interfaceName, operation):
+        if self.pcsaft_parameters is None:
+            error_message = (
+                "The GNNPCSAFT Property Package requires initialization"
+                " to receive SMILES strings to estimate PC-SAFT parameters."
             )
+            self._set_co_error(
+                name=ecape_errors.ECapeBadInvOrder.name,
+                code=1,
+                description=error_message,
+                interfaceName=interfaceName,
+                operation=operation,
+            )
+            self.raise_cape_error(ecape_errors.ECapeBadInvOrder, error_message)
 
-    def _require_material(self):
-        self._require_components()
+    def _require_material(self, interfaceName, operation):
+        self._require_components(
+            interfaceName=interfaceName,
+            operation=operation,
+        )
         if self.material is None:
-            raise ECapeBadInvOrder(
+            error_message = (
                 "SetMaterial (ICapeThermoMaterialContext) must be called before"
                 " requesting a calculation"
             )
+            self._set_co_error(
+                name=ecape_errors.ECapeBadInvOrder.name,
+                code=1,
+                description=error_message,
+                interfaceName=interfaceName,
+                operation=operation,
+            )
+            self.raise_cape_error(ecape_errors.ECapeBadInvOrder, error_message)
 
     # ---------------------------------------------------------------------------
     # SMILES collection dialog
@@ -173,7 +191,6 @@ class GNNPCSAFTPPbase(ECapeUser):
         CAPE-OPEN error named in `error_cls`.
         """
         # ReportError(f"{error_cls.name}: {message}")
-        self._set_co_error(name=error_cls.name, code=1, description=message)
         raise COMError(error_cls.HR, message, (error_cls.name, message, None, 0, None))
 
 

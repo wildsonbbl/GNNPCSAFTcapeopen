@@ -75,7 +75,10 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
         """
         # TODO: set up formulae, boiltemps and casnos...
 
-        self._require_components()
+        self._require_components(
+            interfaceName="ICapeThermoCompounds",
+            operation="GetCompoundList",
+        )
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
 
         return (
@@ -102,7 +105,10 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
         # TODO: listar mais propriedades constantes suportadas aqui...
-        self._require_components()
+        self._require_components(
+            interfaceName="ICapeThermoCompounds",
+            operation="GetConstPropList",
+        )
         return self.bstr_array_variant(["molecularWeight"])
 
     def ICapeThermoCompounds_GetNumCompounds(self):
@@ -114,7 +120,10 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        self._require_components()
+        self._require_components(
+            interfaceName="ICapeThermoCompounds",
+            operation="GetNumCompounds",
+        )
         return len(self.components_smiles)
 
     def ICapeThermoCompounds_GetPDependentProperty(

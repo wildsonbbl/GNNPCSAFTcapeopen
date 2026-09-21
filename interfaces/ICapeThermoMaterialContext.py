@@ -9,7 +9,9 @@ class ICapeThermoMaterialContext(GNNPCSAFTPPbase):
     # --- ICapeThermoMaterialContext ---
     def ICapeThermoMaterialContext_SetMaterial(self, material):
         "Receives a ICapeThermoMaterial and set up Material Context"
-        self._require_components()
+        self._require_components(
+            interfaceName="ICapeThermoMaterialContext", operation="SetMaterial"
+        )
         self.material = material
 
     def ICapeThermoMaterialContext_UnsetMaterial(self):
