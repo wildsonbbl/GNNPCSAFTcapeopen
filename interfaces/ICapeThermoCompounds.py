@@ -6,7 +6,7 @@ from typing import List
 import numpy as np
 from comtypes.safearray import safearray_as_ndarray
 
-from .ICapeExceptions import ECapeInvalidArgument
+from .ICapeExceptions import ECapeInvalidArgument, ECapeThrmPropertyNotAvailable
 from .utils_common import GNNPCSAFTPPbase
 
 
