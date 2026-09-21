@@ -11,12 +11,13 @@ from comtypes.gen import CAPEOPEN110
 from comtypes.safearray import _midlSAFEARRAY
 
 from . import ecape_errors
+from .ecape_user import ECapeUser
 from .ICapeExceptions import ECapeBadInvOrder
 
 _SMILES_CHAR_RE = re.compile(r"^[A-Za-z0-9@+\-\[\]\(\)=#\\/%.:*$]+$")
 
 
-class GNNPCSAFTPPbase:
+class GNNPCSAFTPPbase(ECapeUser):
     "ICapeIdentification Class with methods implemented"
 
     material: Optional[CAPEOPEN110.ICapeThermoMaterial] = None
@@ -172,6 +173,7 @@ class GNNPCSAFTPPbase:
         CAPE-OPEN error named in `error_cls`.
         """
         # ReportError(f"{error_cls.name}: {message}")
+        self._set_co_error(name=error_cls.name, code=1, description=message)
         raise COMError(error_cls.HR, message, (error_cls.name, message, None, 0, None))
 
 

@@ -52,6 +52,7 @@ class ICapeUtilities(GNNPCSAFTPPbase):
     "ICapeUtilities Class with methods implemented"
 
     def __init__(self):
+        super().__init__()
         self._pmc_state = PMCState.NON_INITIALIZED
         self.simulation_context = None
         self.components_smiles = []
@@ -66,6 +67,12 @@ class ICapeUtilities(GNNPCSAFTPPbase):
         also legal if you'd rather build a real, empty collection object —
         see the spec's note under 5.1 if you need that variant instead).
         """
+        self._set_co_error(
+            name="ICapeUtilities",
+            code=1,
+            description="This Property Package does not expose parameters.",
+            scope="ICapeUtilities.GetParameters",
+        )
         self.raise_cape_error(
             ECapeNoImpl, "This Property Package does not expose parameters."
         )
