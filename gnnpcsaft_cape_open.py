@@ -74,9 +74,9 @@ class GNNPCSAFTPropertyPackage(
         IUnknown,
     ]
 
-    def __init__(self) -> None:
-        super().__init__()
-        self.SetComponents(["O", "CCO"])
+    # def __init__(self) -> None:
+    #     super().__init__()
+    #     self.SetComponents(["O", "CCO"])
 
     def SetComponents(self, components_smiles: Iterable[str]):
         """Configure the fixed set of compounds this Property Package supports.

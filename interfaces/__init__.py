@@ -8,6 +8,7 @@ from .ICapeThermoMaterialContext import ICapeThermoMaterialContext
 from .ICapeThermoPhases import ICapeThermoPhases
 from .ICapeThermoPropertyRoutine import ICapeThermoPropertyRoutine
 from .ICapeThermoUniversalConstant import ICapeThermoUniversalConstant
+from .ICapeUtilities import ICapeUtilities
 
 
 class PropertyPackage(
@@ -19,17 +20,11 @@ class PropertyPackage(
     ICapeThermoPhases,
     ICapeThermoUniversalConstant,
     ECapeUserImpl,
+    ICapeUtilities,
 ):
     """Cape-Open Property Package"""
 
 
 __all__ = [
-    "ICapeIdentification",
-    "ICapeThermoCompounds",
-    "ICapeThermoEquilibriumRoutine",
-    "ICapeThermoMaterialContext",
-    "ICapeThermoPhases",
-    "ICapeThermoPropertyRoutine",
-    "ICapeThermoUniversalConstant",
     "PropertyPackage",
 ]

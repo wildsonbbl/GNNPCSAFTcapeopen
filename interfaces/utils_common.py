@@ -18,6 +18,8 @@ class GNNPCSAFTPPbase:  # pylint: disable = too-few-public-methods
     components_smiles: List[str]
     pcsaft_parameters: List[List[float]]
     _kij_matrix = List[List[float]]
+    _pmc_state: str = "non_initialized"
+    simulation_context: Optional[CAPEOPEN110.ICapeSimulationContext] = None
 
     def bstr_array_variant(self, values: List):
         "make array with type VT_ARRAY | VT_BSTR"

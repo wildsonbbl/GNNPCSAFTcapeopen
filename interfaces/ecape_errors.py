@@ -116,6 +116,7 @@ class ECapeUnknown(ECapeUserImpl):
     """Raised when no other error specified by the operation applies. No extra state."""
 
     HR = ECapeUnknownHR
+    name = "ECapeUnknown"
 
 
 # ---------------------------------------------------------------------------
@@ -125,18 +126,21 @@ class ECapeData(ECapeUserImpl):
     """Base of the data-related errors: bad arguments, parameters, licence issues."""
 
     HR = ECapeDataHR
+    name = "ECapeData"
 
 
 class ECapeLicenceError(ECapeData):
     """The licence agreement is not respected. No extra state."""
 
     HR = ECapeLicenceErrorHR
+    name = "ECapeLicenceError"
 
 
 class ECapeBadCOParameter(ECapeData):
     """A Parameter Common Interface object has an invalid status."""
 
     HR = ECapeBadCOParameterHR
+    name = "ECapeBadCOParameter"
 
     def __init__(self):
         super().__init__()
@@ -158,6 +162,7 @@ class ECapeBadArgument(ECapeData):
     """An argument value of the operation is not correct."""
 
     HR = ECapeBadArgumentHR
+    name = "ECapeBadArgument"
 
     def __init__(self):
         super().__init__()
@@ -174,12 +179,14 @@ class ECapeInvalidArgument(ECapeBadArgument):
     """An invalid argument value was passed (e.g. a phase name not in the CO Phase List)."""
 
     HR = ECapeInvalidArgumentHR
+    name = "ECapeInvalidArgument"
 
 
 class ECapeOutOfBounds(ECapeBadArgument, ECapeBoundariesImpl):
     """An argument value is outside of its bounds. Carries both position and bounds state."""
 
     HR = ECapeOutOfBoundsHR
+    name = "ECapeOutOfBounds"
 
     def __init__(self):
         ECapeBadArgument.__init__(self)
@@ -193,18 +200,21 @@ class ECapeImplementation(ECapeUserImpl):
     """Base of the errors related to the current implementation."""
 
     HR = ECapeImplementationHR
+    name = "ECapeImplementation"
 
 
 class ECapeNoImpl(ECapeImplementation):
     """The operation exists per the CO standard but is not implemented/supported."""
 
     HR = ECapeNoImplHR
+    name = "ECapeNoImpl"
 
 
 class ECapeLimitedImpl(ECapeImplementation):
     """The limit of a partial implementation has been violated (e.g. TP flash only)."""
 
     HR = ECapeLimitedImplHR
+    name = "ECapeLimitedImpl"
 
 
 # ---------------------------------------------------------------------------
@@ -214,42 +224,49 @@ class ECapeComputation(ECapeUserImpl):
     """Base of the errors related to a calculation."""
 
     HR = ECapeComputationHR
+    name = "ECapeComputation"
 
 
 class ECapeOutOfResources(ECapeComputation):
     """The physical resources necessary to execute the operation are out of limits."""
 
     HR = ECapeOutOfResourcesHR
+    name = "ECapeOutOfResources"
 
 
 class ECapeNoMemory(ECapeOutOfResources):
     """The physical memory necessary to execute the operation is out of limit."""
 
     HR = ECapeNoMemoryHR
+    name = "ECapeNoMemory"
 
 
 class ECapeTimeOut(ECapeOutOfResources):
     """The time-out criterion is reached."""
 
     HR = ECapeTimeOutHR
+    name = "ECapeTimeOut"
 
 
 class ECapeFailedInitialisation(ECapeComputation):
     """A necessary pre-requisite/initialisation has not been performed or has failed."""
 
     HR = ECapeFailedInitialisationHR
+    name = "ECapeFailedInitialisation"
 
 
 class ECapeSolvingError(ECapeComputation):
     """A numerical algorithm fails for any reason."""
 
     HR = ECapeSolvingErrorHR
+    name = "ECapeSolvingError"
 
 
 class ECapeBadInvOrder(ECapeComputation):
     """A necessary pre-requisite operation was not called before this one."""
 
     HR = ECapeBadInvOrderHR
+    name = "ECapeBadInvOrder"
 
     def __init__(self):
         super().__init__()
@@ -266,6 +283,7 @@ class ECapeInvalidOperation(ECapeComputation):
     """This operation is not valid in the current context. No extra state."""
 
     HR = ECapeInvalidOperationHR
+    name = "ECapeInvalidOperation"
 
 
 # ---------------------------------------------------------------------------
@@ -275,24 +293,28 @@ class ECapePersistence(ECapeUserImpl):
     """Base of the errors related to persistence."""
 
     HR = ECapePersistenceHR
+    name = "ECapePersistence"
 
 
 class ECapePersistenceOverflow(ECapePersistence):
     """There is an overflow of the internal persistence system. No extra state."""
 
     HR = ECapePersistenceOverflowHR
+    name = "ECapePersistenceOverflow"
 
 
 class ECapeIllegalAccess(ECapePersistence):
     """Access to something within the persistence system is not authorised."""
 
     HR = ECapeIllegalAccessHR
+    name = "ECapeIllegalAccess"
 
 
 class ECapePersistenceNotFound(ECapePersistence):
     """The requested object/table/item within the persistence system was not found."""
 
     HR = ECapePersistenceNotFoundHR
+    name = "ECapePersistenceNotFound"
 
     def __init__(self):
         super().__init__()
@@ -309,6 +331,7 @@ class ECapePersistenceSystemError(ECapePersistence):
     """A severe error occurred within the persistence system. No extra state."""
 
     HR = ECapePersistenceSystemErrorHR
+    name = "ECapePersistenceSystemError"
 
 
 # ---------------------------------------------------------------------------
