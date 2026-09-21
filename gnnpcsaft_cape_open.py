@@ -70,6 +70,7 @@ class GNNPCSAFTPropertyPackage(
         CAPEOPEN110.ICapeThermoEquilibriumRoutine,
         CAPEOPEN110.ICapeThermoUniversalConstant,
         CAPEOPEN110.ECapeUser,
+        CAPEOPEN110.ECapeRoot,
         CAPEOPEN110.ICapeUtilities,
         IUnknown,
     ]
