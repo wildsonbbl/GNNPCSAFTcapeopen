@@ -14,10 +14,14 @@ ECapeRoot, ECapeUser and ECapeBoundaries are abstract and have no HRESULT of the
 
 Usage sketch:
 
-    from ecape_errors import ECapeInvalidArgument, ECapeSolvingErrorHR
+    from ecape_errors import ECapeInvalidArgument, ECapeInvalidArgumentHR, ECapeSolvingError
 
     class MyPropertyPackage(ECapeInvalidArgument, ECapeSolvingError, ..., comtypes.COMObject):
-        _com_interfaces_ = [IECapeUser, IECapeInvalidArgument, IECapeSolvingError, ...]
+        _com_interfaces_ = [
+            CAPEOPENXXX.ECapeUser,
+            CAPEOPENXXX.ECapeInvalidArgument,
+            CAPEOPENXXX.ECapeSolvingError,
+        ...]
 
         def CalcEquilibrium(self, matObj, flashType, props):
             if flashType not in KNOWN_FLASH_TYPES:
