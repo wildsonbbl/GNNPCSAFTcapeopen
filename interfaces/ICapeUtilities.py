@@ -24,8 +24,6 @@ SMILES strings the user entered, ready to be consumed by the rest of your
 Property Package (building the component list, calling RDKit, etc.).
 """
 
-from comtypes import COMError
-
 try:
     from comtypes.gen import CAPEOPEN110 as _CO
 except ImportError:
@@ -43,42 +41,7 @@ from .ecape_errors import (
     ECapeNoImpl,
     ECapeUnknown,
 )
-from .utils_common import GNNPCSAFTPPbase
-
-# ---------------------------------------------------------------------------
-# CAPE-OPEN error handling
-# ---------------------------------------------------------------------------
-# CAPE-OPEN errors are communicated on the COM side through IErrorInfo.
-# We assign each named CAPE-OPEN error from the spec a distinct HRESULT
-# (any value with the top "severity" bit set works; these are arbitrary but
-# stable, in the vendor-defined range) and set the description text via
-# ReportError so a PME reading IErrorInfo.GetDescription() sees the message.
-
-
-def raise_cape_error(error_cls, message):
-    """
-    Set rich COM error info (name + description) and raise the matching
-    COMError so the calling PME sees an HRESULT it can map back to the
-    CAPE-OPEN error named in `error_cls`.
-    """
-    # ReportError(f"{error_cls.name}: {message}")
-    raise COMError(error_cls.HR, message, (error_cls.name, message, None, 0, None))
-
-
-# ---------------------------------------------------------------------------
-# PMC lifecycle states (see spec section 3.4, State diagram)
-# ---------------------------------------------------------------------------
-
-
-class PMCState:
-    "PMC lifecycle states"
-
-    NON_INITIALIZED = "non_initialized"
-    INITIALIZING = "initializing"
-    EXECUTING = "executing"
-    TERMINATING = "terminating"
-    TERMINATED = "terminated"
-
+from .utils_common import GNNPCSAFTPPbase, PMCState
 
 # ---------------------------------------------------------------------------
 # ICapeUtilities
@@ -103,7 +66,7 @@ class ICapeUtilities(GNNPCSAFTPPbase):
         also legal if you'd rather build a real, empty collection object —
         see the spec's note under 5.1 if you need that variant instead).
         """
-        raise_cape_error(
+        self.raise_cape_error(
             ECapeNoImpl, "This Property Package does not expose parameters."
         )
 
@@ -115,7 +78,7 @@ class ICapeUtilities(GNNPCSAFTPPbase):
         diagnostics, or use unit conversion services).
         """
         if simContext is None:
-            raise_cape_error(ECapeInvalidArgument, "simContext must not be NULL.")
+            self.raise_cape_error(ECapeInvalidArgument, "simContext must not be NULL.")
         self.simulation_context = simContext
 
     # -- Initialize ----------------------------------------------------------
@@ -130,7 +93,7 @@ class ICapeUtilities(GNNPCSAFTPPbase):
         call Terminate() and may only release us via native COM mechanisms.
         """
         if self._pmc_state != PMCState.NON_INITIALIZED:
-            raise_cape_error(
+            self.raise_cape_error(
                 ECapeBadInvOrder,
                 "Initialize() must be called exactly once, before any other method.",
             )
@@ -141,7 +104,7 @@ class ICapeUtilities(GNNPCSAFTPPbase):
             smiles_list = self._prompt_for_smiles_list()
         except Exception as exc:  # pylint: disable=broad-exception-caught
             self._pmc_state = PMCState.NON_INITIALIZED
-            raise_cape_error(
+            self.raise_cape_error(
                 ECapeFailedInitialisation,
                 f"Could not display the component-input dialog: {exc}",
             )
@@ -150,7 +113,7 @@ class ICapeUtilities(GNNPCSAFTPPbase):
         if smiles_list is None:
             # User cancelled: this counts as a failed initialization.
             self._pmc_state = PMCState.NON_INITIALIZED
-            raise_cape_error(
+            self.raise_cape_error(
                 ECapeFailedInitialisation,
                 "Component definition was cancelled by the user.",
             )
@@ -170,12 +133,14 @@ class ICapeUtilities(GNNPCSAFTPPbase):
         Initialize().
         """
         if self._pmc_state == PMCState.NON_INITIALIZED:
-            raise_cape_error(
+            self.raise_cape_error(
                 ECapeBadInvOrder,
                 "Terminate() called before a successful Initialize().",
             )
         if self._pmc_state in (PMCState.TERMINATING, PMCState.TERMINATED):
-            raise_cape_error(ECapeBadInvOrder, "Terminate() called more than once.")
+            self.raise_cape_error(
+                ECapeBadInvOrder, "Terminate() called more than once."
+            )
 
         self._pmc_state = PMCState.TERMINATING
         try:
@@ -183,7 +148,7 @@ class ICapeUtilities(GNNPCSAFTPPbase):
             self.simulation_context = None
             self.components_smiles = []
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            raise_cape_error(ECapeUnknown, f"Error while terminating: {exc}")
+            self.raise_cape_error(ECapeUnknown, f"Error while terminating: {exc}")
         finally:
             self._pmc_state = PMCState.TERMINATED
 
@@ -198,14 +163,14 @@ class ICapeUtilities(GNNPCSAFTPPbase):
         CORBA (host/UI coupling); raise ECapeUnknown there if needed.
         """
         if self._pmc_state != PMCState.EXECUTING:
-            raise_cape_error(
+            self.raise_cape_error(
                 ECapeUnknown, "Edit() is only available once the PMC is initialized."
             )
 
         try:
             new_smiles = self._prompt_for_smiles_list()
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            raise_cape_error(ECapeUnknown, f"Could not display the editor: {exc}")
+            self.raise_cape_error(ECapeUnknown, f"Could not display the editor: {exc}")
             return
 
         if new_smiles is not None:

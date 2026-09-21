@@ -2,13 +2,15 @@
 
 import array
 import re
+from dataclasses import dataclass
 from typing import List, Optional
 
-from comtypes import BSTR
+from comtypes import BSTR, COMError
 from comtypes.automation import VARIANT
 from comtypes.gen import CAPEOPEN110
 from comtypes.safearray import _midlSAFEARRAY
 
+from . import ecape_errors
 from .ICapeExceptions import ECapeBadInvOrder
 
 _SMILES_CHAR_RE = re.compile(r"^[A-Za-z0-9@+\-\[\]\(\)=#\\/%.:*$]+$")
@@ -38,8 +40,9 @@ class GNNPCSAFTPPbase:  # pylint: disable = too-few-public-methods
 
     def _require_components(self):
         if not self.pcsaft_parameters:
-            raise ECapeBadInvOrder(
-                "Call SetComponents before using this Property Package"
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeBadInvOrder,
+                message="GNNPCSAFT requires initialization",
             )
 
     def _require_material(self):
@@ -152,3 +155,37 @@ class GNNPCSAFTPPbase:  # pylint: disable = too-few-public-methods
         root.mainloop()
 
         return result["smiles"]
+
+        # ---------------------------------------------------------------------------
+        # CAPE-OPEN error handling
+        # ---------------------------------------------------------------------------
+        # CAPE-OPEN errors are communicated on the COM side through IErrorInfo.
+        # We assign each named CAPE-OPEN error from the spec a distinct HRESULT
+        # (any value with the top "severity" bit set works; these are arbitrary but
+        # stable, in the vendor-defined range) and set the description text via
+        # ReportError so a PME reading IErrorInfo.GetDescription() sees the message.
+
+    def raise_cape_error(self, error_cls, message):
+        """
+        Set rich COM error info (name + description) and raise the matching
+        COMError so the calling PME sees an HRESULT it can map back to the
+        CAPE-OPEN error named in `error_cls`.
+        """
+        # ReportError(f"{error_cls.name}: {message}")
+        raise COMError(error_cls.HR, message, (error_cls.name, message, None, 0, None))
+
+
+# ---------------------------------------------------------------------------
+# PMC lifecycle states (see spec section 3.4, State diagram)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class PMCState:
+    "PMC lifecycle states"
+
+    NON_INITIALIZED = "non_initialized"
+    INITIALIZING = "initializing"
+    EXECUTING = "executing"
+    TERMINATING = "terminating"
+    TERMINATED = "terminated"
