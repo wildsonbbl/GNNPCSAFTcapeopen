@@ -16,12 +16,12 @@ from .ICapeExceptions import ECapeBadInvOrder
 _SMILES_CHAR_RE = re.compile(r"^[A-Za-z0-9@+\-\[\]\(\)=#\\/%.:*$]+$")
 
 
-class GNNPCSAFTPPbase:  # pylint: disable = too-few-public-methods
+class GNNPCSAFTPPbase:
     "ICapeIdentification Class with methods implemented"
 
     material: Optional[CAPEOPEN110.ICapeThermoMaterial] = None
     components_smiles: List[str]
-    pcsaft_parameters: List[List[float]]
+    pcsaft_parameters: Optional[List[List[float]]] = None
     _kij_matrix = List[List[float]]
     _pmc_state: str = "non_initialized"
     simulation_context: Optional[CAPEOPEN110.ICapeSimulationContext] = None
@@ -42,7 +42,7 @@ class GNNPCSAFTPPbase:  # pylint: disable = too-few-public-methods
         if not self.pcsaft_parameters:
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeBadInvOrder,
-                message="GNNPCSAFT requires initialization",
+                message="GNNPCSAFT Property Package requires initialization",
             )
 
     def _require_material(self):

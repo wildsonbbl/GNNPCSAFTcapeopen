@@ -43,12 +43,13 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
         requested_props = [str(p) for p in self._as_list(props)]
         indices = self._compound_indices(compIds)
         missing = False
+        pcsaft_parameters = copy.copy(self.pcsaft_parameters)
         propvals: List[float] = []
         for prop in requested_props:
             key = prop.strip().lower()
             for idx in indices:
-                if key == "molecularweight":
-                    propvals.append(self.pcsaft_parameters[idx][8])
+                if (key == "molecularweight") and (pcsaft_parameters is not None):
+                    propvals.append(pcsaft_parameters[idx][8])
                 else:
                     propvals.append(float("nan"))
                     missing = True
@@ -75,6 +76,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
         # TODO: set up formulae, boiltemps and casnos...
 
         self._require_components()
+        pcsaft_parameters = copy.copy(self.pcsaft_parameters)
 
         return (
             self.bstr_array_variant(self.components_smiles),
@@ -82,7 +84,9 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
             self.bstr_array_variant(self.components_smiles),
             self.r8_array_variant([float("nan")] * len(self.components_smiles)),
             self.r8_array_variant(
-                [parameters[8] for parameters in self.pcsaft_parameters]
+                [parameters[8] for parameters in pcsaft_parameters]
+                if pcsaft_parameters is not None
+                else [float("nan")] * len(self.components_smiles)
             ),
             self.bstr_array_variant(["UNDEFINED"] * len(self.components_smiles)),
         )

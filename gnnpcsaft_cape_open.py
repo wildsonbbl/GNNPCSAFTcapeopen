@@ -98,7 +98,7 @@ class GNNPCSAFTPropertyPackage(
         "Set kij matrix"
         self._require_components()
         matrix = [list(map(float, row)) for row in kij_matrix]
-        size = len(self.pcsaft_parameters)
+        size = len(self.pcsaft_parameters) if self.pcsaft_parameters else 0
         if len(matrix) != size or any(len(row) != size for row in matrix):
             raise ECapeInvalidArgument(
                 "kij_matrix must be a square matrix matching the components"
