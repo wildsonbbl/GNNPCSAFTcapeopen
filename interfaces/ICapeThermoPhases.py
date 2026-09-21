@@ -1,9 +1,9 @@
 "ICapeThermoPhases"
 
-from .utils_common import bstr_array_variant
+from .utils_common import GNNPCSAFTPPbase
 
 
-class ICapeThermoPhases:
+class ICapeThermoPhases(GNNPCSAFTPPbase):
     "ICapeThermoPhases Class with methods implemented"
 
     # --- ICapeThermoPhases ---
@@ -73,8 +73,8 @@ class ICapeThermoPhases:
         """
 
         phaseLabels, stateOfAggregation, keyCompoundId = (
-            bstr_array_variant(["1", "2"]),
-            bstr_array_variant(["Liquid", "Vapor"]),
-            bstr_array_variant(["UNDEFINED", "UNDEFINED"]),
+            self.bstr_array_variant(["1", "2"]),
+            self.bstr_array_variant(["Liquid", "Vapor"]),
+            self.bstr_array_variant(["UNDEFINED", "UNDEFINED"]),
         )
         return phaseLabels, stateOfAggregation, keyCompoundId

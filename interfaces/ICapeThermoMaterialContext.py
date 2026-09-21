@@ -1,17 +1,15 @@
 "ICapeThermoMaterialContext"
 
-from .utils_common import _require_components
+from .utils_common import GNNPCSAFTPPbase
 
 
-class ICapeThermoMaterialContext:
+class ICapeThermoMaterialContext(GNNPCSAFTPPbase):
     "ICapeThermoMaterialContext Class with methods implemented"
-
-    material = None
 
     # --- ICapeThermoMaterialContext ---
     def ICapeThermoMaterialContext_SetMaterial(self, material):
         "Receives a ICapeThermoMaterial and set up Material Context"
-        _require_components(self)
+        self._require_components()
         self.material = material
 
     def ICapeThermoMaterialContext_UnsetMaterial(self):

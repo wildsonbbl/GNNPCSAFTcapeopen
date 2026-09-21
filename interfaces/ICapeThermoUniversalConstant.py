@@ -1,6 +1,7 @@
 "ICapeThermoUniversalConstant"
 
 from .ICapeExceptions import ECapeInvalidArgument
+from .utils_common import GNNPCSAFTPPbase
 
 _UNIVERSAL_CONSTANTS = {
     "avogadroConstant": 6.0221419947e23,
@@ -12,7 +13,7 @@ _UNIVERSAL_CONSTANTS = {
 }
 
 
-class ICapeThermoUniversalConstant:
+class ICapeThermoUniversalConstant(GNNPCSAFTPPbase):
     "ICapeThermoUniversalConstant Class with methods implemented"
 
     # --- ICapeThermoUniversalConstant ---

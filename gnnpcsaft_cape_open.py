@@ -43,7 +43,6 @@ from gnnepcsaft_mcp_server.utils import predict_pcsaft_parameters
 
 import interfaces
 from interfaces.ICapeExceptions import ECapeInvalidArgument
-from interfaces.utils_common import _require_components
 
 CLSID = "{A3F10E65-3852-4C10-9D45-6B9A8C110001}"
 PROGID = "wildsonbbl.gnnpcsaftPP"
@@ -70,6 +69,8 @@ class GNNPCSAFTPropertyPackage(
         CAPEOPEN110.ICapeThermoPhases,
         CAPEOPEN110.ICapeThermoEquilibriumRoutine,
         CAPEOPEN110.ICapeThermoUniversalConstant,
+        CAPEOPEN110.ECapeUser,
+        CAPEOPEN110.ICapeUtilities,
         IUnknown,
     ]
 
@@ -95,7 +96,7 @@ class GNNPCSAFTPropertyPackage(
 
     def SetKijMatrix(self, kij_matrix: Sequence[Sequence[float]]):
         "Set kij matrix"
-        _require_components(self)
+        self._require_components()
         matrix = [list(map(float, row)) for row in kij_matrix]
         size = len(self.pcsaft_parameters)
         if len(matrix) != size or any(len(row) != size for row in matrix):

@@ -1,20 +1,17 @@
 "ICapeThermoCompounds"
 
+import copy
 from typing import List
 
-from .ICapeExceptions import (
-    ECapeInvalidArgument,
-    ECapeThrmPropertyNotAvailable,
-)
-from .utils_common import _require_components, bstr_array_variant, r8_array_variant
+import numpy as np
+from comtypes.safearray import safearray_as_ndarray
+
+from .ICapeExceptions import ECapeInvalidArgument
+from .utils_common import GNNPCSAFTPPbase
 
 
-class ICapeThermoCompounds:
+class ICapeThermoCompounds(GNNPCSAFTPPbase):
     "ICapeThermoCompounds Class with methods implemented"
-
-    components_smiles: List[str]
-    pcsaft_parameters: List[List[float]]
-    _kij_matrix = List[List[float]]
 
     # --- ICapeThermoCompounds ---
     def ICapeThermoCompounds_GetCompoundConstant(self, props, compIds):
@@ -39,7 +36,10 @@ class ICapeThermoCompounds:
         """
         # TODO: buscar/calcular as constantes dos compostos aqui...
 
-        _require_components(self)
+        with safearray_as_ndarray:
+            props = copy.copy(props.value)
+            compIds = copy.copy(compIds.value)
+
         requested_props = [str(p) for p in self._as_list(props)]
         indices = self._compound_indices(compIds)
         missing = False
@@ -61,7 +61,7 @@ class ICapeThermoCompounds:
         return propvals
 
     def ICapeThermoCompounds_GetCompoundList(
-        self, compIds, formulae, names, boilTemps, molwts, casnos
+        self, _compIds, _formulae, _names, _boilTemps, _molwts, _casnos
     ):
         """
         Returns the list of all Compounds, with identifiers and additional
@@ -74,18 +74,18 @@ class ICapeThermoCompounds:
         """
         # TODO: set up formulae, boiltemps and casnos...
 
-        _require_components(self)
+        self._require_components()
 
-        compIds, formulae, names, boilTemps, molwts, casnos = (
-            bstr_array_variant(self.components_smiles),
-            bstr_array_variant(["UNDEFINED"] * len(self.components_smiles)),
-            bstr_array_variant(self.components_smiles),
-            r8_array_variant([float("nan")] * len(self.components_smiles)),
-            r8_array_variant([parameters[8] for parameters in self.pcsaft_parameters]),
-            bstr_array_variant(["UNDEFINED"] * len(self.components_smiles)),
+        return (
+            self.bstr_array_variant(self.components_smiles),
+            self.bstr_array_variant(["UNDEFINED"] * len(self.components_smiles)),
+            self.bstr_array_variant(self.components_smiles),
+            self.r8_array_variant([float("nan")] * len(self.components_smiles)),
+            self.r8_array_variant(
+                [parameters[8] for parameters in self.pcsaft_parameters]
+            ),
+            self.bstr_array_variant(["UNDEFINED"] * len(self.components_smiles)),
         )
-
-        return compIds, formulae, names, boilTemps, molwts, casnos
 
     def ICapeThermoCompounds_GetConstPropList(self):
         """
@@ -98,8 +98,8 @@ class ICapeThermoCompounds:
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
         # TODO: listar mais propriedades constantes suportadas aqui...
-        _require_components(self)
-        return bstr_array_variant(["molecularWeight"])
+        self._require_components()
+        return self.bstr_array_variant(["molecularWeight"])
 
     def ICapeThermoCompounds_GetNumCompounds(self):
         """
@@ -110,10 +110,12 @@ class ICapeThermoCompounds:
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        _require_components(self)
+        self._require_components()
         return len(self.components_smiles)
 
-    def ICapeThermoCompounds_GetPDependentProperty(self, props, pressure, compIds):
+    def ICapeThermoCompounds_GetPDependentProperty(
+        self, props, pressure, compIds, propvals_ptr
+    ):
         """
         Returns the values of pressure-dependent Physical Properties for the
         specified pure Compounds.
@@ -134,9 +136,12 @@ class ICapeThermoCompounds:
         """
         # TODO: calcular as propriedades dependentes de pressão aqui...
 
-        return r8_array_variant(
-            [float("nan")] * len(self.components_smiles * len(props))
-        )
+        with safearray_as_ndarray:
+            _props = copy.copy(props.value)
+            _compIds = copy.copy(compIds.value)
+
+        _propvals = self.r8_array_variant([float("nan")] * len(_compIds) * len(_props))
+        return _propvals
 
     def ICapeThermoCompounds_GetPDependentPropList(self):
         """
@@ -150,9 +155,11 @@ class ICapeThermoCompounds:
         """
         # TODO: listar as propriedades dependentes de pressão suportadas aqui...
 
-        return bstr_array_variant(["UNDEFINED"])
+        return self.bstr_array_variant(["UNDEFINED"])
 
-    def ICapeThermoCompounds_GetTDependentProperty(self, props, temperature, compIds):
+    def ICapeThermoCompounds_GetTDependentProperty(
+        self, props, temperature, compIds, propvals_ptr
+    ):
         """
         Returns the values of temperature-dependent Physical Properties for
         the specified pure Compounds.
@@ -172,9 +179,13 @@ class ICapeThermoCompounds:
             ECapeThrmPropertyNotAvailable, ECapeUnknown, ECapeBadInvOrder.
         """
         # TODO: calcular as propriedades dependentes de temperatura aqui...
-        return r8_array_variant(
-            [float("nan")] * len(self.components_smiles * len(props))
-        )
+
+        with safearray_as_ndarray:
+            _props = copy.copy(props.value)
+            _compIds = copy.copy(compIds.value)
+
+        _propvals = self.r8_array_variant([float("nan")] * len(_compIds) * len(_props))
+        return _propvals
 
     def ICapeThermoCompounds_GetTDependentPropList(self):
         """
@@ -188,7 +199,7 @@ class ICapeThermoCompounds:
         """
         # TODO: listar as propriedades dependentes de temperatura suportadas aqui...
 
-        return bstr_array_variant(["UNDEFINED"])
+        return self.bstr_array_variant(["UNDEFINED"])
 
     def _compound_indices(self, compIds):
         if compIds is None:
@@ -208,4 +219,8 @@ class ICapeThermoCompounds:
     def _as_list(value):
         if value is None:
             return []
-        return list(value) if isinstance(value, (list, tuple)) else [value]
+        return (
+            list(value)
+            if isinstance(value, (list, tuple))
+            else value.tolist() if isinstance(value, np.ndarray) else [value]
+        )

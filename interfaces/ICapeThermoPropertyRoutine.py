@@ -1,7 +1,10 @@
 "ICapeThermoPropertyRoutine"
 
+from .utils_common import GNNPCSAFTPPbase
 
-class ICapeThermoPropertyRoutine:
+
+class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
+    "ICapeThermoPropertyRoutine Class with methods implemented"
 
     # --- ICapeThermoPropertyRoutine ---
     def ICapeThermoPropertyRoutine_CalcAndGetLnPhi(
@@ -109,9 +112,18 @@ class ICapeThermoPropertyRoutine:
         # TODO: verificar suporte à propriedade/par de fases solicitado aqui...
 
     def ICapeThermoPropertyRoutine_GetSinglePhasePropList(self):
-        """ICapeThermoPropertyRoutine_GetSinglePhasePropList"""
+        """
+        Returns the list of supported non-constant single-phase properties
+        (i.e. those calculable by CalcSinglePhaseProp), including derivatives.
+
+        Returns:
+            props (CapeArrayString)
+
+        Raises (per spec): ECapeNoImpl, ECapeUnknown.
+        """
 
         # TODO: listar as propriedades de uma fase suportadas aqui...
+        return self.bstr_array_variant(["UNDEFINED"])
 
     def ICapeThermoPropertyRoutine_GetTwoPhasePropList(self):
         """
@@ -124,3 +136,4 @@ class ICapeThermoPropertyRoutine:
         Raises (per spec): ECapeNoImpl, ECapeUnknown.
         """
         # TODO: listar as propriedades de duas fases suportadas aqui...
+        return self.bstr_array_variant(["UNDEFINED"])

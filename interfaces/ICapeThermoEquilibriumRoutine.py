@@ -1,7 +1,9 @@
 "ICapeThermoEquilibriumRoutine"
 
+from .utils_common import GNNPCSAFTPPbase
 
-class ICapeThermoEquilibriumRoutine:
+
+class ICapeThermoEquilibriumRoutine(GNNPCSAFTPPbase):
 
     # --- ICapeThermoEquilibriumRoutine ---
     def ICapeThermoEquilibriumRoutine_CalcEquilibrium(
