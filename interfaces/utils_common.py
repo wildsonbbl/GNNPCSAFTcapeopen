@@ -1,6 +1,7 @@
 "Utilities common to all interfaces"
 
 import array
+import re
 from typing import List, Optional
 
 from comtypes import BSTR
@@ -9,6 +10,8 @@ from comtypes.gen import CAPEOPEN110
 from comtypes.safearray import _midlSAFEARRAY
 
 from .ICapeExceptions import ECapeBadInvOrder
+
+_SMILES_CHAR_RE = re.compile(r"^[A-Za-z0-9@+\-\[\]\(\)=#\\/%.:*$]+$")
 
 
 class GNNPCSAFTPPbase:  # pylint: disable = too-few-public-methods
@@ -46,3 +49,106 @@ class GNNPCSAFTPPbase:  # pylint: disable = too-few-public-methods
                 "SetMaterial (ICapeThermoMaterialContext) must be called before"
                 " requesting a calculation"
             )
+
+    # ---------------------------------------------------------------------------
+    # SMILES collection dialog
+    # ---------------------------------------------------------------------------
+
+    # A conservative SMILES-character check. This is NOT a validity parser for
+    # SMILES grammar (that's RDKit's job) — it only rejects obviously-wrong
+    # input (empty strings, stray whitespace-only lines) before you hand the
+    # list off to your chemistry backend.
+
+    def _validate_smiles_syntax(self, smiles):
+        """Cheap sanity check; raises ValueError with a human-readable reason."""
+        s = smiles.strip()
+        if not s:
+            raise ValueError("empty SMILES string")
+        if not _SMILES_CHAR_RE.match(s):
+            raise ValueError(f"'{s}' contains characters not valid in SMILES")
+        return s
+
+    def _prompt_for_smiles_list(self) -> Optional[List[str]]:
+        """
+        Blocking, modal dialog asking the user for one SMILES string per line.
+        Returns a list[str] of cleaned SMILES, or None if the user cancelled.
+
+        Implemented with Tkinter (stdlib, no extra dependency). Swap this out
+        for a Qt/wx dialog if your PME's host process already has one of those
+        GUI toolkits running an event loop.
+        """
+        import tkinter as tk  # pylint: disable=import-outside-toplevel
+        from tkinter import (  # pylint: disable=import-outside-toplevel
+            messagebox,
+            scrolledtext,
+        )
+
+        result = {}
+        result["smiles"] = None
+
+        root = tk.Tk()
+        root.title("Property Package — Component Definition")
+        root.attributes("-topmost", True)
+
+        tk.Label(
+            root,
+            text="Enter one SMILES string per line for each component\n"
+            "this Property Package instance should handle:",
+            justify="left",
+            padx=10,
+            pady=10,
+        ).pack(anchor="w")
+
+        text_box = scrolledtext.ScrolledText(root, width=50, height=12)
+        text_box.pack(padx=10, pady=(0, 10))
+        text_box.focus_set()
+
+        button_frame = tk.Frame(root)
+        button_frame.pack(pady=(0, 10))
+
+        def on_ok():
+            raw_lines = text_box.get("1.0", "end").splitlines()
+            cleaned = []
+            errors = []
+            for i, line in enumerate(raw_lines, start=1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    cleaned.append(self._validate_smiles_syntax(line))
+                except ValueError as exc:
+                    errors.append(f"Line {i}: {exc}")
+
+            if errors:
+                messagebox.showerror(
+                    "Invalid SMILES",
+                    "Please fix the following before continuing:\n\n"
+                    + "\n".join(errors),
+                )
+                return
+
+            if not cleaned:
+                messagebox.showerror(
+                    "No components entered",
+                    "Enter at least one SMILES string.",
+                )
+                return
+
+            result["smiles"] = cleaned
+            root.destroy()
+
+        def on_cancel():
+            result["smiles"] = None
+            root.destroy()
+
+        tk.Button(button_frame, text="OK", width=12, command=on_ok).pack(
+            side="left", padx=5
+        )
+        tk.Button(button_frame, text="Cancel", width=12, command=on_cancel).pack(
+            side="left", padx=5
+        )
+
+        root.protocol("WM_DELETE_WINDOW", on_cancel)
+        root.mainloop()
+
+        return result["smiles"]

@@ -51,8 +51,8 @@ CATEGORY_ID = "{CF51E384-0110-4ed8-ACB7-B50CFDE6908E}"
 
 # 2. Definir o Property Package
 class GNNPCSAFTPropertyPackage(
-    COMObject,
     interfaces.PropertyPackage,
+    COMObject,
 ):
     "GNNPCSAFTPropertyPackage"
 
