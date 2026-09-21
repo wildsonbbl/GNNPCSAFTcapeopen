@@ -1,6 +1,6 @@
 """
 Concrete CAPE-OPEN error interfaces from the "Error Common Interface" spec, section 3.3,
-built on top of ECapeUserImpl (see ecape_user.py).
+built on top of ECapeUser (see ecape_user.py).
 
 Each class below mirrors one box in the error class diagram (Figure 6). Since COM has no
 interface inheritance, section 5.1.2 requires every component to implement, itself, every
@@ -37,7 +37,7 @@ whatever comtypes actually generated for your typelib if it had to disambiguate
 same-named attributes across several of your implemented interfaces.
 """
 
-from .ecape_user import ECapeUserImpl
+from .ecape_user import ECapeUser
 
 # pylint: disable=missing-function-docstring
 
@@ -112,7 +112,7 @@ class ECapeBoundariesImpl:
 # ---------------------------------------------------------------------------
 # ECapeUnknown (3.3.4)
 # ---------------------------------------------------------------------------
-class ECapeUnknown(ECapeUserImpl):
+class ECapeUnknown(ECapeUser):
     """Raised when no other error specified by the operation applies. No extra state."""
 
     HR = ECapeUnknownHR
@@ -122,7 +122,7 @@ class ECapeUnknown(ECapeUserImpl):
 # ---------------------------------------------------------------------------
 # ECapeData hierarchy (3.3.5 - 3.3.10)
 # ---------------------------------------------------------------------------
-class ECapeData(ECapeUserImpl):
+class ECapeData(ECapeUser):
     """Base of the data-related errors: bad arguments, parameters, licence issues."""
 
     HR = ECapeDataHR
@@ -196,7 +196,7 @@ class ECapeOutOfBounds(ECapeBadArgument, ECapeBoundariesImpl):
 # ---------------------------------------------------------------------------
 # ECapeImplementation hierarchy (3.3.11 - 3.3.13)
 # ---------------------------------------------------------------------------
-class ECapeImplementation(ECapeUserImpl):
+class ECapeImplementation(ECapeUser):
     """Base of the errors related to the current implementation."""
 
     HR = ECapeImplementationHR
@@ -220,7 +220,7 @@ class ECapeLimitedImpl(ECapeImplementation):
 # ---------------------------------------------------------------------------
 # ECapeComputation hierarchy (3.3.14 - 3.3.21)
 # ---------------------------------------------------------------------------
-class ECapeComputation(ECapeUserImpl):
+class ECapeComputation(ECapeUser):
     """Base of the errors related to a calculation."""
 
     HR = ECapeComputationHR
@@ -289,7 +289,7 @@ class ECapeInvalidOperation(ECapeComputation):
 # ---------------------------------------------------------------------------
 # ECapePersistence hierarchy (3.3.22 - 3.3.26)
 # ---------------------------------------------------------------------------
-class ECapePersistence(ECapeUserImpl):
+class ECapePersistence(ECapeUser):
     """Base of the errors related to persistence."""
 
     HR = ECapePersistenceHR

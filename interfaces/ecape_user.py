@@ -16,11 +16,11 @@ into your property package COMObject, which is expected to support every error i
 it is capable of raising).
 
 Usage:
-    class ECapeInvalidArgument(ECapeUserImpl):
+    class ECapeInvalidArgument(ECapeUser):
         # concrete error-specific state/methods go here
         ...
 
-    class MyPropertyPackage(ECapeUserImpl, ECapeInvalidArgument, ..., comtypes.COMObject):
+    class MyPropertyPackage(ECapeUser, ECapeInvalidArgument, ..., comtypes.COMObject):
         _com_interfaces_ = [IECapeUser, IECapeInvalidArgument, ...]
 
         def SomeCOOperation(self, ...):
@@ -45,8 +45,8 @@ names it expects and rename the methods here to match.
 """
 
 
-class ECapeUserImpl:
-    """Mixin supplying the ECapeRoot/ECapeUser state and property getters."""
+class ECapeUser:
+    "ECapeUser Class with methods implemented"
 
     def __init__(self):
         # ECapeRoot
