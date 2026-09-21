@@ -1,6 +1,6 @@
 "ICapeThermoUniversalConstant"
 
-from .ICapeExceptions import ECapeInvalidArgument
+from .ecape_errors import ECapeInvalidArgument
 from .utils_common import GNNPCSAFTPPbase
 
 _UNIVERSAL_CONSTANTS = {
@@ -35,8 +35,11 @@ class ICapeThermoUniversalConstant(GNNPCSAFTPPbase):
         """
         if constantId in _UNIVERSAL_CONSTANTS:
             return _UNIVERSAL_CONSTANTS[constantId]
-        raise ECapeInvalidArgument(
-            f"Unknown universal constant identifier: {constantId!r}"
+        self.raise_cape_error(
+            error_cls=ECapeInvalidArgument,
+            description=f"Unknown universal constant identifier: {constantId!r}",
+            interfaceName="ICapeThermoUniversalConstant",
+            operation="GetUniversalConstant",
         )
 
     def ICapeThermoUniversalConstant_GetUniversalConstantList(self):

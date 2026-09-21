@@ -44,14 +44,12 @@ class GNNPCSAFTPPbase(ECapeUser):
                 "The GNNPCSAFT Property Package requires initialization"
                 " to receive SMILES strings to estimate PC-SAFT parameters."
             )
-            self._set_co_error(
-                name=ecape_errors.ECapeBadInvOrder.name,
-                code=1,
-                description=error_message,
+            self.raise_cape_error(
+                ecape_errors.ECapeBadInvOrder,
+                error_message,
                 interfaceName=interfaceName,
                 operation=operation,
             )
-            self.raise_cape_error(ecape_errors.ECapeBadInvOrder, error_message)
 
     def _require_material(self, interfaceName, operation):
         self._require_components(
@@ -63,14 +61,12 @@ class GNNPCSAFTPPbase(ECapeUser):
                 "SetMaterial (ICapeThermoMaterialContext) must be called before"
                 " requesting a calculation"
             )
-            self._set_co_error(
-                name=ecape_errors.ECapeBadInvOrder.name,
-                code=1,
-                description=error_message,
+            self.raise_cape_error(
+                ecape_errors.ECapeBadInvOrder,
+                error_message,
                 interfaceName=interfaceName,
                 operation=operation,
             )
-            self.raise_cape_error(ecape_errors.ECapeBadInvOrder, error_message)
 
     # ---------------------------------------------------------------------------
     # SMILES collection dialog
@@ -184,14 +180,32 @@ class GNNPCSAFTPPbase(ECapeUser):
         # stable, in the vendor-defined range) and set the description text via
         # ReportError so a PME reading IErrorInfo.GetDescription() sees the message.
 
-    def raise_cape_error(self, error_cls, message):
+    def raise_cape_error(
+        self,
+        error_cls,
+        description="N/A",
+        scope="N/A",
+        interfaceName="N/A",
+        operation="N/A",
+        moreInfo="N/A",
+    ):
         """
         Set rich COM error info (name + description) and raise the matching
         COMError so the calling PME sees an HRESULT it can map back to the
         CAPE-OPEN error named in `error_cls`.
         """
-        # ReportError(f"{error_cls.name}: {message}")
-        raise COMError(error_cls.HR, message, (error_cls.name, message, None, 0, None))
+        self._set_co_error(
+            name=error_cls.name,
+            code=1,
+            description=description,
+            scope=scope,
+            interfaceName=interfaceName,
+            operation=operation,
+            moreInfo=moreInfo,
+        )
+        raise COMError(
+            error_cls.HR, description, (error_cls.name, description, None, 0, None)
+        )
 
 
 # ---------------------------------------------------------------------------

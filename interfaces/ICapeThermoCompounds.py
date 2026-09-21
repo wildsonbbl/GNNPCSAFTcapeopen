@@ -6,7 +6,7 @@ from typing import List
 import numpy as np
 from comtypes.safearray import safearray_as_ndarray
 
-from .ICapeExceptions import ECapeInvalidArgument, ECapeThrmPropertyNotAvailable
+from . import ecape_errors
 from .utils_common import GNNPCSAFTPPbase
 
 
@@ -42,7 +42,6 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
 
         requested_props = [str(p) for p in self._as_list(props)]
         indices = self._compound_indices(compIds)
-        missing = False
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
         propvals: List[float] = []
         for prop in requested_props:
@@ -51,14 +50,16 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
                 if (key == "molecularweight") and (pcsaft_parameters is not None):
                     propvals.append(pcsaft_parameters[idx][8])
                 else:
-                    propvals.append(float("nan"))
-                    missing = True
-        if missing:
-            # Still return what we have, but flag it as CAPE-OPEN requires.
-            raise ECapeThrmPropertyNotAvailable(
-                "One or more requested compound constants are not available;"
-                " only 'molecularWeight' is supported by this Property Package"
-            )
+
+                    self.raise_cape_error(
+                        error_cls=ecape_errors.ECapeThrmPropertyNotAvailable,
+                        description=(
+                            f"Requested compound constant ({key}) are not available;"
+                            " only 'molecularWeight' is supported by this Property Package"
+                        ),
+                        interfaceName="ICapeThermoCompounds",
+                        operation="GetCompoundConstant",
+                    )
         return propvals
 
     def ICapeThermoCompounds_GetCompoundList(
@@ -222,10 +223,13 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
         for cid in self._as_list(compIds):
             try:
                 indices.append(lower_names.index(str(cid).lower()))
-            except ValueError as exc:
-                raise ECapeInvalidArgument(
-                    f"Unrecognised compound identifier: {cid!r}"
-                ) from exc
+            except ValueError:
+                self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeInvalidArgument,
+                    description=f"Unrecognised compound identifier: {cid!r}",
+                    interfaceName="ICapeThermoCompounds",
+                    operation="GetTDependentPropList",
+                )
         return indices
 
     @staticmethod

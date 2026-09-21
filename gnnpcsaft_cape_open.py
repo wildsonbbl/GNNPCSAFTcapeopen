@@ -42,7 +42,7 @@ except Exception as e:
 from gnnepcsaft_mcp_server.utils import predict_pcsaft_parameters
 
 import interfaces
-from interfaces.ICapeExceptions import ECapeInvalidArgument
+from interfaces.ecape_errors import ECapeInvalidArgument
 
 CLSID = "{A3F10E65-3852-4C10-9D45-6B9A8C110001}"
 PROGID = "wildsonbbl.gnnpcsaftPP"
@@ -87,8 +87,7 @@ class GNNPCSAFTPropertyPackage(
         compound-selection dialog would play in a full implementation.
         """
         components_smiles = [str(smiles) for smiles in components_smiles]
-        if not components_smiles:
-            raise ECapeInvalidArgument("At least one component is required")
+        self._require_components(interfaceName="N/A", operation="SetComponents")
         self.components_smiles = components_smiles
         self.pcsaft_parameters = [
             predict_pcsaft_parameters(smiles) for smiles in components_smiles
@@ -101,8 +100,10 @@ class GNNPCSAFTPropertyPackage(
         matrix = [list(map(float, row)) for row in kij_matrix]
         size = len(self.pcsaft_parameters) if self.pcsaft_parameters else 0
         if len(matrix) != size or any(len(row) != size for row in matrix):
-            raise ECapeInvalidArgument(
-                "kij_matrix must be a square matrix matching the components"
+            self.raise_cape_error(
+                error_cls=ECapeInvalidArgument,
+                description="kij_matrix must be a square matrix matching the components",
+                operation="SetKijMatrix",
             )
         self._kij_matrix = matrix
 

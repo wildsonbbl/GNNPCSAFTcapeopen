@@ -179,6 +179,15 @@ class ECapeBadArgument(ECapeData):
         return self._co_position
 
 
+class ECapeThrmPropertyNotAvailable(ECapeBadArgument):
+    """
+    The Physical Property required is not available from the
+    Material Object, possibly for the basis requested
+    """
+
+    name = "ECapeThrmPropertyNotAvailable"
+
+
 class ECapeInvalidArgument(ECapeBadArgument):
     """An invalid argument value was passed (e.g. a phase name not in the CO Phase List)."""
 
