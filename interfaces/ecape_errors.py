@@ -77,7 +77,7 @@ LAST_E_INTERFACE_HR = 0x8004FFFF
 # ---------------------------------------------------------------------------
 # ECapeBoundaries (3.3.3) -- abstract "utility" mixin, not raised on its own
 # ---------------------------------------------------------------------------
-class ECapeBoundariesImpl:
+class ECapeBoundaries:
     """
     Factors out value/type/bounds state. Per the diagram this is pulled in by
     ECapeOutOfBounds, which needs to report the offending value and its legal range
@@ -182,7 +182,7 @@ class ECapeInvalidArgument(ECapeBadArgument):
     name = "ECapeInvalidArgument"
 
 
-class ECapeOutOfBounds(ECapeBadArgument, ECapeBoundariesImpl):
+class ECapeOutOfBounds(ECapeBadArgument, ECapeBoundaries):
     """An argument value is outside of its bounds. Carries both position and bounds state."""
 
     HR = ECapeOutOfBoundsHR
@@ -190,7 +190,7 @@ class ECapeOutOfBounds(ECapeBadArgument, ECapeBoundariesImpl):
 
     def __init__(self):
         ECapeBadArgument.__init__(self)
-        ECapeBoundariesImpl.__init__(self)
+        ECapeBoundaries.__init__(self)
 
 
 # ---------------------------------------------------------------------------
