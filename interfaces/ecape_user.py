@@ -85,7 +85,7 @@ class ECapeUser:
     # ------------------------------------------------------------------
     # ECapeRoot
     # ------------------------------------------------------------------
-    def get_name(self):
+    def _get_name(self):
         """A short description of the error. Mandatory field."""
         return self._co_error_name
 
