@@ -101,6 +101,10 @@ class ICapeUtilities(GNNPCSAFTPPbase):
         ECapeFailedInitialisation, per spec: after this, the PME must not
         call Terminate() and may only release us via native COM mechanisms.
         """
+if self.components_smiles is not None and self.pcsaft_parameters is not None:
+            self._pmc_state = PMCState.EXECUTING
+            return
+
         if self._pmc_state != PMCState.NON_INITIALIZED:
             self.raise_cape_error(
                 ECapeBadInvOrder,
