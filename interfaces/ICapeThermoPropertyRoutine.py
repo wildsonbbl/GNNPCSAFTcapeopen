@@ -1,6 +1,33 @@
 "ICapeThermoPropertyRoutine"
 
+import copy
+
+import numpy as np
+from gnnepcsaft.pcsaft.pcsaft_feos import (
+    mix_den_feos,
+    mix_ln_activity_coefficient,
+    mix_ln_fugacity_coefficient,
+)
+
+from . import ecape_errors
 from .utils_common import GNNPCSAFTPPbase
+
+_SINGLE_PHASE_PROPS = (
+    "activityCoefficient",
+    "density",
+    "logFugacityCoefficient",
+    "molecularWeight",
+)
+_SINGLE_PHASE_PROPS_MOLE = ("density",)
+_TWO_PHASE_PROPS = ("kvalue", "logKvalue")
+_PHASE_LABELS = ("1", "2")
+
+# eCapeCalculationCode flags used by CalcAndGetLnPhi's fFlags argument
+CAPE_NO_CALCULATION = 0
+CAPE_LOG_FUGACITY_COEFFICIENTS = 1
+CAPE_T_DERIVATIVE = 2
+CAPE_P_DERIVATIVE = 4
+CAPE_MOLE_NUMBERS_DERIVATIVES = 8
 
 
 class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
@@ -39,13 +66,94 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
             ECapeFailedInitialisation, ECapeThrmPropertyNotAvailable,
             ECapeSolvingError, ECapeInvalidArgument, ECapeUnknown.
         """
+        _moleNumbers = self._as_list(moleNumbers.value)
 
-        # TODO: Cálculo do ln(phi) e derivadas via PC-SAFT aqui...
+        self._require_components(
+            interfaceName="ICapeThermoPropertyRoutine",
+            operation="CalcAndGetLnPhi",
+        )
+        pcsaft_parameters = copy.copy(self.pcsaft_parameters)
+        _kij_matrix = copy.copy(self._kij_matrix)
+        assert pcsaft_parameters is not None
+
+        self._require_phase_label(phaseLabel)
+        if fFlags != CAPE_LOG_FUGACITY_COEFFICIENTS:
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeLimitedImpl,
+                description="Only the plain log-fugacity-coefficient calculation is "
+                "implemented; T/P/mole-number derivatives are not available",
+                interfaceName="ICapeThermoPropertyRoutine",
+                operation="CalcAndGetLnPhi",
+            )
+        fractions = [float(v) for v in _moleNumbers]
+        if len(fractions) != len(pcsaft_parameters):
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeInvalidArgument,
+                description="moleNumbers must have one entry per configured compound",
+                interfaceName="ICapeThermoPropertyRoutine",
+                operation="CalcAndGetLnPhi",
+            )
+        state = [float(temperature), float(pressure), *fractions]
+        ln_phi = mix_ln_fugacity_coefficient(pcsaft_parameters, state, _kij_matrix)
+        return np.asarray(ln_phi).tolist()
 
     def ICapeThermoPropertyRoutine_CalcSinglePhaseProp(self, props, phaseLabel):
         """Calculates properties/derivatives that depend on one phase"""
+        _co_properties = self._as_list(props.value)
+        if any(
+            not self.ICapeThermoPropertyRoutine_CheckSinglePhasePropSpec(
+                co_property=prop, phaseLabel=phaseLabel
+            )
+            for prop in _co_properties
+        ):
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeLimitedImpl,
+                description="Unsupported single-phase"
+                f" properties ---> {_co_properties} <---"
+                f" with phaseLable ---> {phaseLabel} <---",
+                interfaceName="ICapeThermoPropertyRoutine",
+                operation="CalcSinglePhaseProp",
+            )
 
-        # TODO: Cálculo das propriedades de uma fase aqui...
+        self._require_material(
+            interfaceName="ICapeThermoPropertyRoutine",
+            operation="CalcSinglePhaseProp",
+        )
+        assert self.material is not None
+        self._require_phase_label(phaseLabel)
+        requested = [str(p) for p in _co_properties]
+        unsupported = [p for p in requested if p not in _SINGLE_PHASE_PROPS]
+        if unsupported:
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeLimitedImpl,
+                description=f"Unsupported single-phase"
+                f" propert{'y' if len(unsupported)==1 else 'ies'}:"
+                f" {', '.join(unsupported)}",
+                interfaceName="ICapeThermoPropertyRoutine",
+                operation="CalcSinglePhaseProp",
+                moreInfo="GNNPCSAFT Property Package can't "
+                "calculate these properties. Choose another Package",
+            )
+
+        temperature, pressure, fractions = self._get_tp_fraction(phaseLabel)
+        state = [temperature, pressure, *fractions]
+
+        # Compute everything before writing anything back (a partial failure
+        # must not leave partial results in the Material Object).
+        computed = {
+            prop: self._compute_single_phase_property(prop, state, fractions)
+            for prop in requested
+        }
+        for prop, value in computed.items():
+            if prop in _SINGLE_PHASE_PROPS_MOLE:
+                self.material.SetSinglePhaseProp(
+                    prop, phaseLabel, "Mole", self.r8_array_variant(value)
+                )
+            else:
+                self.material.SetSinglePhaseProp(
+                    prop, phaseLabel, None, self.r8_array_variant(value)
+                )
+        return
 
     def ICapeThermoPropertyRoutine_CalcTwoPhaseProp(self, props, phaseLabels):
         """
@@ -66,8 +174,69 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
             ECapeFailedInitialisation, ECapeThrmPropertyNotAvailable,
             ECapeSolvingError, ECapeInvalidArgument, ECapeUnknown.
         """
+        _co_properties = self._as_list(props.value)
+        _co_phase_labels = self._as_list(phaseLabels.value)
 
-        # TODO: Cálculo das propriedades de duas fases aqui...
+        self._require_material(
+            interfaceName="ICapeThermoPropertyRoutine",
+            operation="CalcTwoPhaseProp",
+        )
+        assert self.material is not None
+        pcsaft_parameters = copy.copy(self.pcsaft_parameters)
+        _kij_matrix = copy.copy(self._kij_matrix)
+        assert pcsaft_parameters is not None
+
+        labels = [str(l) for l in _co_phase_labels]
+        if len(labels) != 2:
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeInvalidArgument,
+                description="phaseLabels must contain exactly two labels",
+                interfaceName="ICapeThermoPropertyRoutine",
+                operation="CalcTwoPhaseProp",
+            )
+        for label in labels:
+            self._require_phase_label(label)
+        requested = [str(p) for p in _co_properties]
+        unsupported = [p for p in requested if p not in _TWO_PHASE_PROPS]
+        if unsupported:
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeLimitedImpl,
+                description=f"Unsupported two-phase"
+                f" propert{'y' if len(unsupported)==1 else 'ies'}:"
+                f" {', '.join(unsupported)}",
+                interfaceName="ICapeThermoPropertyRoutine",
+                operation="CalcTwoPhaseProp",
+                moreInfo="GNNPCSAFT Property Package can't "
+                "calculate these properties. Choose another Package",
+            )
+
+        t1, p1, x1 = self._get_tp_fraction(labels[0])
+        t2, p2, x2 = self._get_tp_fraction(labels[1])
+        if abs(t1 - t2) > 1e-6 or abs(p1 - p2) > 1e-6:
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeFailedInitialisation,
+                description="CalcTwoPhaseProp requires both phases to share the same "
+                "temperature and pressure",
+                interfaceName="ICapeThermoPropertyRoutine",
+                operation="CalcTwoPhaseProp",
+            )
+
+        ln_phi_1 = mix_ln_fugacity_coefficient(
+            pcsaft_parameters, [t1, p1, *x1], _kij_matrix
+        )
+        ln_phi_2 = mix_ln_fugacity_coefficient(
+            pcsaft_parameters, [t1, p1, *x2], _kij_matrix
+        )
+        log_kvalue = np.asarray(ln_phi_2) - np.asarray(ln_phi_1)
+
+        computed = {}
+        for prop in requested:
+            if prop == "logKvalue":
+                computed[prop] = log_kvalue.tolist()
+            elif prop == "kvalue":
+                computed[prop] = np.exp(log_kvalue).tolist()
+        for prop, value in computed.items():
+            self.material.SetTwoPhaseProp(prop, labels, "Mole", value)
 
     def ICapeThermoPropertyRoutine_CheckSinglePhasePropSpec(
         self, co_property, phaseLabel
@@ -88,7 +257,7 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
 
         Raises (per spec): ECapeNoImpl, ECapeInvalidArgument, ECapeUnknown.
         """
-        # TODO: verificar suporte à propriedade/fase solicitada aqui...
+        return co_property in _SINGLE_PHASE_PROPS and phaseLabel in _PHASE_LABELS
 
     def ICapeThermoPropertyRoutine_CheckTwoPhasePropSpec(
         self, co_property, phaseLabels
@@ -109,7 +278,12 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
 
         Raises (per spec): ECapeNoImpl, ECapeInvalidArgument, ECapeUnknown.
         """
-        # TODO: verificar suporte à propriedade/par de fases solicitado aqui...
+        _co_phase_labels = self._as_list(phaseLabels.value)
+        return (
+            str(co_property) in _TWO_PHASE_PROPS
+            and len(_co_phase_labels) == 2
+            and all(label in _PHASE_LABELS for label in _co_phase_labels)
+        )
 
     def ICapeThermoPropertyRoutine_GetSinglePhasePropList(self):
         """
@@ -121,9 +295,7 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown.
         """
-
-        # TODO: listar as propriedades de uma fase suportadas aqui...
-        return self.bstr_array_variant(["UNDEFINED"])
+        return self.bstr_array_variant(list(_SINGLE_PHASE_PROPS))
 
     def ICapeThermoPropertyRoutine_GetTwoPhasePropList(self):
         """
@@ -135,5 +307,44 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown.
         """
-        # TODO: listar as propriedades de duas fases suportadas aqui...
-        return self.bstr_array_variant(["UNDEFINED"])
+        return self.bstr_array_variant(list(_TWO_PHASE_PROPS))
+
+    def _compute_single_phase_property(self, prop, state, fractions):
+        pcsaft_parameters = copy.copy(self.pcsaft_parameters)
+        _kij_matrix = copy.copy(self._kij_matrix)
+        assert pcsaft_parameters is not None
+
+        if prop == "activityCoefficient":
+            return np.exp(
+                mix_ln_activity_coefficient(
+                    parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
+                )
+            ).tolist()
+        if prop == "density":
+            return [
+                mix_den_feos(
+                    parameters=pcsaft_parameters,
+                    state=[state[0], state[1], *fractions],
+                    kij_matrix=_kij_matrix,
+                )
+            ]
+        if prop == "logFugacityCoefficient":
+            return mix_ln_fugacity_coefficient(pcsaft_parameters, state, _kij_matrix)
+        if prop == "molecularWeight":
+            return [
+                sum(
+                    frac * params[8]
+                    for frac, params in zip(fractions, pcsaft_parameters)
+                )
+            ]
+        return []
+
+    def _require_phase_label(self, phaseLabel):
+        if phaseLabel not in _PHASE_LABELS:
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeInvalidArgument,
+                description=f"Unrecognised phase label: {phaseLabel!r}",
+                interfaceName="ICapeThermoPropertyRoutine",
+                operation="CalcSinglePhaseProp/CalcTwoPhaseProp/CalcAndGetLnPhi",
+                moreInfo="Only Liquid (1) OR Vapor (2) are valid",
+            )
