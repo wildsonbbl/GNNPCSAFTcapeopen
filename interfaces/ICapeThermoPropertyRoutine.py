@@ -1,12 +1,16 @@
 "ICapeThermoPropertyRoutine"
 
 import copy
+from typing import List
 
 import numpy as np
 from gnnepcsaft.pcsaft.pcsaft_feos import (
+    mix_bp_at_fixed_pressure_feos,
     mix_den_feos,
+    mix_dp_at_fixed_pressure_feos,
     mix_ln_activity_coefficient,
     mix_ln_fugacity_coefficient,
+    mix_vp_feos,
 )
 
 from . import ecape_errors
@@ -17,6 +21,10 @@ _SINGLE_PHASE_PROPS = (
     "density",
     "logFugacityCoefficient",
     "molecularWeight",
+    "dewPressure",
+    "bubblePressure",
+    "dewTemperature",
+    "bubbleTemperature",
 )
 _SINGLE_PHASE_PROPS_MOLE = ("density",)
 _TWO_PHASE_PROPS = ("kvalue", "logKvalue")
@@ -120,6 +128,7 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
             operation="CalcSinglePhaseProp",
         )
         assert self.material is not None
+        material = self.material
         self._require_phase_label(phaseLabel)
         requested = [str(p) for p in _co_properties]
         unsupported = [p for p in requested if p not in _SINGLE_PHASE_PROPS]
@@ -141,16 +150,15 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
         # Compute everything before writing anything back (a partial failure
         # must not leave partial results in the Material Object).
         computed = {
-            prop: self._compute_single_phase_property(prop, state, fractions)
-            for prop in requested
+            prop: self._compute_single_phase_property(prop, state) for prop in requested
         }
         for prop, value in computed.items():
             if prop in _SINGLE_PHASE_PROPS_MOLE:
-                self.material.SetSinglePhaseProp(
+                material.SetSinglePhaseProp(
                     prop, phaseLabel, "Mole", self.r8_array_variant(value)
                 )
             else:
-                self.material.SetSinglePhaseProp(
+                material.SetSinglePhaseProp(
                     prop, phaseLabel, None, self.r8_array_variant(value)
                 )
         return
@@ -182,6 +190,7 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
             operation="CalcTwoPhaseProp",
         )
         assert self.material is not None
+        material = self.material
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
         _kij_matrix = copy.copy(self._kij_matrix)
         assert pcsaft_parameters is not None
@@ -236,7 +245,7 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
             elif prop == "kvalue":
                 computed[prop] = np.exp(log_kvalue).tolist()
         for prop, value in computed.items():
-            self.material.SetTwoPhaseProp(prop, labels, "Mole", value)
+            material.SetTwoPhaseProp(prop, labels, "Mole", value)
 
     def ICapeThermoPropertyRoutine_CheckSinglePhasePropSpec(
         self, co_property, phaseLabel
@@ -309,7 +318,7 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
         """
         return self.bstr_array_variant(list(_TWO_PHASE_PROPS))
 
-    def _compute_single_phase_property(self, prop, state, fractions):
+    def _compute_single_phase_property(self, prop, state) -> List[float]:
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
         _kij_matrix = copy.copy(self._kij_matrix)
         assert pcsaft_parameters is not None
@@ -324,7 +333,7 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
             return [
                 mix_den_feos(
                     parameters=pcsaft_parameters,
-                    state=[state[0], state[1], *fractions],
+                    state=state,
                     kij_matrix=_kij_matrix,
                 )
             ]
@@ -334,9 +343,29 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
             return [
                 sum(
                     frac * params[8]
-                    for frac, params in zip(fractions, pcsaft_parameters)
+                    for frac, params in zip(state[1:], pcsaft_parameters)
                 )
             ]
+        if prop in ("dewPressure", "bubblePressure"):
+            bp, dp = mix_vp_feos(
+                parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
+            )
+            if prop == "bubblePressure":
+                return [bp]
+            return [dp]
+        if prop == "dewTemperature":
+            return [
+                mix_dp_at_fixed_pressure_feos(
+                    parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
+                )
+            ]
+        if prop == "bubbleTemperature":
+            return [
+                mix_bp_at_fixed_pressure_feos(
+                    parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
+                )
+            ]
+
         return []
 
     def _require_phase_label(self, phaseLabel):
