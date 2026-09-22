@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass
 from typing import List, Optional
 
+import numpy as np
 from comtypes import BSTR, COMError
 from comtypes.automation import VARIANT
 from comtypes.gen import CAPEOPEN110
