@@ -1,9 +1,23 @@
 "ICapeThermoEquilibriumRoutine"
 
-from .utils_common import GNNPCSAFTPPbase
+import copy
+import logging
+
+from comtypes.gen import CAPEOPEN110
+from gnnepcsaft.pcsaft.pcsaft_feos import (
+    is_stable_feos,
+    mix_tp_flash_feos,
+)
+
+from . import ecape_errors
+from .ICapeThermoPropertyRoutine import (
+    ICapeThermoPropertyRoutine,
+)
+
+_PHASE_LABELS_MAPPING = {"Vapor": "2", "Liquid": "1"}
 
 
-class ICapeThermoEquilibriumRoutine(GNNPCSAFTPPbase):
+class ICapeThermoEquilibriumRoutine(ICapeThermoPropertyRoutine):
     "ICapeThermoEquilibriumRoutine Class with methods implemented"
 
     # --- ICapeThermoEquilibriumRoutine ---

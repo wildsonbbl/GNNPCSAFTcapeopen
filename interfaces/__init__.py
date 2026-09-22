@@ -5,7 +5,6 @@ from .ICapeThermoCompounds import ICapeThermoCompounds
 from .ICapeThermoEquilibriumRoutine import ICapeThermoEquilibriumRoutine
 from .ICapeThermoMaterialContext import ICapeThermoMaterialContext
 from .ICapeThermoPhases import ICapeThermoPhases
-from .ICapeThermoPropertyRoutine import ICapeThermoPropertyRoutine
 from .ICapeThermoUniversalConstant import ICapeThermoUniversalConstant
 from .ICapeUtilities import ICapeUtilities
 
@@ -14,7 +13,6 @@ class PropertyPackage(
     ICapeIdentification,
     ICapeThermoMaterialContext,
     ICapeThermoCompounds,
-    ICapeThermoPropertyRoutine,
     ICapeThermoEquilibriumRoutine,
     ICapeThermoPhases,
     ICapeThermoUniversalConstant,
