@@ -3,7 +3,6 @@
 import copy
 from typing import List
 
-import numpy as np
 from comtypes.safearray import safearray_as_ndarray
 
 from . import ecape_errors
@@ -231,13 +230,3 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
                     operation="GetTDependentPropList",
                 )
         return indices
-
-    @staticmethod
-    def _as_list(value):
-        if value is None:
-            return []
-        return (
-            list(value)
-            if isinstance(value, (list, tuple))
-            else value.tolist() if isinstance(value, np.ndarray) else [value]
-        )
