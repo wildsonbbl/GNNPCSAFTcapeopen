@@ -1,5 +1,7 @@
 "ICapeThermoMaterialContext"
 
+from comtypes.gen.CAPEOPEN110 import ICapeThermoMaterial
+
 from .utils_common import GNNPCSAFTPPbase
 
 
@@ -12,7 +14,7 @@ class ICapeThermoMaterialContext(GNNPCSAFTPPbase):
         self._require_components(
             interfaceName="ICapeThermoMaterialContext", operation="SetMaterial"
         )
-        self.material = material
+        self.material = material.QueryInterface(ICapeThermoMaterial)
 
     def ICapeThermoMaterialContext_UnsetMaterial(self):
         "Unset Material Context"
