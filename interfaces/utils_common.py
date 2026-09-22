@@ -27,19 +27,19 @@ class GNNPCSAFTPPbase(ECapeUser):
     _pmc_state: str = "non_initialized"
     simulation_context: Optional[CAPEOPEN110.ICapeSimulationContext] = None
 
-    def bstr_array_variant(self, values: List):
+    def bstr_array_variant(self, values: List[str]):
         "make array with type VT_ARRAY | VT_BSTR"
         sa = _midlSAFEARRAY(BSTR).from_param(values)
         bstr_array = VARIANT(sa)
         return bstr_array
 
-    def r8_array_variant(self, values: List):
+    def r8_array_variant(self, values: List[float]):
         "make array with type VT_ARRAY | VT_R8"
         sa = array.array("d", values)
         r8_array = VARIANT(sa)
         return r8_array
 
-    def i4_array_variant(self, values: List):
+    def i4_array_variant(self, values: List[int]):
         "make array with type VT_ARRAY | VT_I4"
         sa = array.array("l", values)
         i4_array = VARIANT(sa)
