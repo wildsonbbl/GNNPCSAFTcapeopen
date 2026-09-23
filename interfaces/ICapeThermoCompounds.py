@@ -83,7 +83,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
 
         return (
             self.bstr_array_variant(self.components_smiles),
-            self.bstr_array_variant(["UNDEFINED"] * len(self.components_smiles)),
+            self.bstr_array_variant([""] * len(self.components_smiles)),
             self.bstr_array_variant(self.components_smiles),
             self.r8_array_variant([float("nan")] * len(self.components_smiles)),
             self.r8_array_variant(
@@ -91,7 +91,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
                 if pcsaft_parameters is not None
                 else [float("nan")] * len(self.components_smiles)
             ),
-            self.bstr_array_variant(["UNDEFINED"] * len(self.components_smiles)),
+            self.bstr_array_variant([""] * len(self.components_smiles)),
         )
 
     def ICapeThermoCompounds_GetConstPropList(self):
