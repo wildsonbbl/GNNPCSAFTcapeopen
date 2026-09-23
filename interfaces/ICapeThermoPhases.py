@@ -39,7 +39,7 @@ class ICapeThermoPhases(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoPhases):
         """
 
         result = {
-            "1": {
+            "Liquid": {
                 "StateOfAggregation": "Liquid",
                 "KeyCompoundId": "",
                 "ExcludedCompoundId": "",
@@ -47,7 +47,7 @@ class ICapeThermoPhases(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoPhases):
                 "UserDescription": "Liquid phase",
                 "TypeOfSolid": "",
             },
-            "2": {
+            "Vapor": {
                 "StateOfAggregation": "Vapor",
                 "KeyCompoundId": "",
                 "ExcludedCompoundId": "",
@@ -73,7 +73,7 @@ class ICapeThermoPhases(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoPhases):
         """
 
         phaseLabels, stateOfAggregation, keyCompoundId = (
-            self.bstr_array_variant(["1", "2"]),
+            self.bstr_array_variant(["Liquid", "Vapor"]),
             self.bstr_array_variant(["Liquid", "Vapor"]),
             self.bstr_array_variant(["", ""]),
         )

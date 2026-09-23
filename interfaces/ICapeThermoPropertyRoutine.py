@@ -30,7 +30,7 @@ _SINGLE_PHASE_PROPS = (
 )
 _SINGLE_PHASE_PROPS_MOLE = ("density",)
 _TWO_PHASE_PROPS = ("kvalue", "logKvalue")
-_PHASE_LABELS = ("1", "2")
+_PHASE_LABELS = ("Liquid", "Vapor")
 
 # eCapeCalculationCode flags used by CalcAndGetLnPhi's fFlags argument
 CAPE_NO_CALCULATION = 0

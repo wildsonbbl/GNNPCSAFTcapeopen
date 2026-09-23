@@ -14,8 +14,6 @@ from .ICapeThermoPropertyRoutine import (
     ICapeThermoPropertyRoutine,
 )
 
-_PHASE_LABELS_MAPPING = {"Vapor": "2", "Liquid": "1"}
-
 
 class ICapeThermoEquilibriumRoutine(
     ICapeThermoPropertyRoutine, CAPEOPEN110.ICapeThermoEquilibriumRoutine
@@ -83,7 +81,7 @@ class ICapeThermoEquilibriumRoutine(
             if is_stable_feos(
                 parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
             ):
-                phaseLabel = _PHASE_LABELS_MAPPING["Liquid"]
+                phaseLabel = "Liquid"
                 self.material.SetPresentPhases(
                     phaseLabels=self.bstr_array_variant([phaseLabel]),
                     phaseStatus=self.i4_array_variant([CAPEOPEN110.CAPE_ATEQUILIBRIUM]),
@@ -130,12 +128,7 @@ class ICapeThermoEquilibriumRoutine(
         )
 
         self.material.SetPresentPhases(
-            self.bstr_array_variant(
-                [
-                    _PHASE_LABELS_MAPPING["Vapor"],
-                    _PHASE_LABELS_MAPPING["Liquid"],
-                ]
-            ),
+            self.bstr_array_variant(["Vapor", "Liquid"]),
             self.i4_array_variant(
                 [
                     CAPEOPEN110.CAPE_ATEQUILIBRIUM,
@@ -145,51 +138,51 @@ class ICapeThermoEquilibriumRoutine(
         )
         self.material.SetSinglePhaseProp(
             "temperature",
-            _PHASE_LABELS_MAPPING["Vapor"],
+            "Vapor",
             None,
             self.r8_array_variant([temperature]),
         )
         self.material.SetSinglePhaseProp(
             "temperature",
-            _PHASE_LABELS_MAPPING["Liquid"],
+            "Liquid",
             None,
             self.r8_array_variant([temperature]),
         )
         self.material.SetSinglePhaseProp(
             "pressure",
-            _PHASE_LABELS_MAPPING["Vapor"],
+            "Vapor",
             None,
             self.r8_array_variant([pressure]),
         )
         self.material.SetSinglePhaseProp(
             "pressure",
-            _PHASE_LABELS_MAPPING["Liquid"],
+            "Liquid",
             None,
             self.r8_array_variant([pressure]),
         )
         self.material.SetSinglePhaseProp(
             "fraction",
-            _PHASE_LABELS_MAPPING["Vapor"],
+            "Vapor",
             "Mole",
             self.r8_array_variant(vapor_fractions),
         )
         self.material.SetSinglePhaseProp(
             "fraction",
-            _PHASE_LABELS_MAPPING["Liquid"],
+            "Liquid",
             "Mole",
             self.r8_array_variant(liquid_fractions),
         )
         if vapor_beta is not None:
             self.material.SetSinglePhaseProp(
                 "phaseFraction",
-                _PHASE_LABELS_MAPPING["Vapor"],
+                "Vapor",
                 "Mole",
                 self.r8_array_variant([vapor_beta]),
             )
         if liquid_beta is not None:
             self.material.SetSinglePhaseProp(
                 "phaseFraction",
-                _PHASE_LABELS_MAPPING["Liquid"],
+                "Liquid",
                 "Mole",
                 self.r8_array_variant([liquid_beta]),
             )
@@ -197,12 +190,7 @@ class ICapeThermoEquilibriumRoutine(
         two_phase_prop_list = self.GetTwoPhasePropList()
         self.CalcTwoPhaseProp(
             props=two_phase_prop_list,
-            phaseLabels=self.bstr_array_variant(
-                [
-                    _PHASE_LABELS_MAPPING["Vapor"],
-                    _PHASE_LABELS_MAPPING["Liquid"],
-                ]
-            ),
+            phaseLabels=self.bstr_array_variant(["Vapor", "Liquid"]),
         )
         logging.debug("SINGLE PHASE PROP FINISHED")
         return 0
