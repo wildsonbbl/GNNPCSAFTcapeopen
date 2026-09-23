@@ -87,7 +87,6 @@ class GNNPCSAFTPropertyPackage(
         compound-selection dialog would play in a full implementation.
         """
         components_smiles = [str(smiles) for smiles in components_smiles]
-        self._require_components(interfaceName="N/A", operation="SetComponents")
         self.components_smiles = components_smiles
         self.pcsaft_parameters = [
             predict_pcsaft_parameters(smiles) for smiles in components_smiles
