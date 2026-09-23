@@ -1,6 +1,7 @@
 "ICapeThermoPropertyRoutine"
 
 import copy
+import logging
 from typing import List
 
 import numpy as np
@@ -157,6 +158,7 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
                 pass
 
         for prop, value in computed.items():
+            logging.debug("IN CalcTwoPhaseProp --->%r = %r", prop, value)
             if prop in _SINGLE_PHASE_PROPS_MOLE:
                 material.SetSinglePhaseProp(
                     prop, phaseLabel, "Mole", self.r8_array_variant(value)
@@ -249,7 +251,13 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
             elif prop == "kvalue":
                 computed[prop] = np.exp(log_kvalue).tolist()
         for prop, value in computed.items():
-            material.SetTwoPhaseProp(prop, labels, "Mole", value)
+            logging.debug("IN CalcTwoPhaseProp ---> %r = %r", prop, value)
+            material.SetTwoPhaseProp(
+                prop,
+                self.bstr_array_variant(labels),
+                "Mole",
+                self.r8_array_variant(value),
+            )
 
     def ICapeThermoPropertyRoutine_CheckSinglePhasePropSpec(
         self, co_property, phaseLabel
