@@ -41,6 +41,8 @@ whatever comtypes actually generated for your typelib if it had to disambiguate
 same-named attributes across several of your implemented interfaces.
 """
 
+from comtypes.gen import CAPEOPEN110
+
 from .ecape_user import ECapeUser
 
 # pylint: disable=missing-function-docstring
@@ -81,7 +83,7 @@ LAST_E_INTERFACE_HR = 0x8004FFFF
 # ---------------------------------------------------------------------------
 # ECapeBoundaries (3.3.3) -- abstract "utility" mixin, not raised on its own
 # ---------------------------------------------------------------------------
-class ECapeBoundaries:
+class ECapeBoundaries(CAPEOPEN110.ECapeBoundaries):
     """
     Factors out value/type/bounds state. Per the diagram this is pulled in by
     ECapeOutOfBounds, which needs to report the offending value and its legal range

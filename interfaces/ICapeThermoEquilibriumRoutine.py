@@ -17,11 +17,13 @@ from .ICapeThermoPropertyRoutine import (
 _PHASE_LABELS_MAPPING = {"Vapor": "2", "Liquid": "1"}
 
 
-class ICapeThermoEquilibriumRoutine(ICapeThermoPropertyRoutine):
+class ICapeThermoEquilibriumRoutine(
+    ICapeThermoPropertyRoutine, CAPEOPEN110.ICapeThermoEquilibriumRoutine
+):
     "ICapeThermoEquilibriumRoutine Class with methods implemented"
 
     # --- ICapeThermoEquilibriumRoutine ---
-    def ICapeThermoEquilibriumRoutine_CalcEquilibrium(
+    def CalcEquilibrium(
         self,
         specification1,
         specification2,
@@ -60,9 +62,7 @@ class ICapeThermoEquilibriumRoutine(ICapeThermoPropertyRoutine):
         _kij_matrix = copy.copy(self._kij_matrix)
         assert pcsaft_parameters is not None
 
-        if not self.ICapeThermoEquilibriumRoutine_CheckEquilibriumSpec(
-            specification1, specification2, solutionType
-        ):
+        if not self.CheckEquilibriumSpec(specification1, specification2, solutionType):
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeLimitedImpl,
                 description="Only a Temperature/Pressure (TP) flash specification is "
@@ -74,6 +74,8 @@ class ICapeThermoEquilibriumRoutine(ICapeThermoPropertyRoutine):
         temperature = self._get_overall_scalar("temperature")
         pressure = self._get_overall_scalar("pressure")
         fractions = self._get_overall_fractions()
+        if 0.0 in fractions:
+            return 0
         state = [temperature, pressure, *fractions]
         logging.debug("Passed getting state: %s", state)
 
@@ -102,15 +104,13 @@ class ICapeThermoEquilibriumRoutine(ICapeThermoPropertyRoutine):
                     "phaseFraction", phaseLabel, "Mole", self.r8_array_variant([1.0])
                 )
                 logging.debug("STABLE PHASE FINISHED")
-                single_phase_prop_list = (
-                    self.ICapeThermoPropertyRoutine_GetSinglePhasePropList()
-                )
-                self.ICapeThermoPropertyRoutine_CalcSinglePhaseProp(
+                single_phase_prop_list = self.GetSinglePhasePropList()
+                self.CalcSinglePhaseProp(
                     props=single_phase_prop_list,
                     phaseLabel=phaseLabel,
                 )
                 logging.debug("SINGLE PHASE PROP FINISHED")
-                return
+                return 0
             result = mix_tp_flash_feos(pcsaft_parameters, state, _kij_matrix)
         except Exception as exc:  # pylint:disable=broad-exception-caught
             self.raise_cape_error(
@@ -125,7 +125,7 @@ class ICapeThermoEquilibriumRoutine(ICapeThermoPropertyRoutine):
         liquid_beta = self._phase_attr(result.liquid, ("phase_fraction", "beta"))
         vapor_beta = self._phase_attr(result.vapor, ("phase_fraction", "beta"))
         logging.debug(
-            "Passed getting tp flash: [liquid_fractions, vapor_fractions] == %s",
+            "IN CalcEquilibrium ---> [liquid_fractions, vapor_fractions] == %s",
             [liquid_fractions, vapor_fractions],
         )
 
@@ -194,8 +194,8 @@ class ICapeThermoEquilibriumRoutine(ICapeThermoPropertyRoutine):
                 self.r8_array_variant([liquid_beta]),
             )
 
-        two_phase_prop_list = self.ICapeThermoPropertyRoutine_GetTwoPhasePropList()
-        self.ICapeThermoPropertyRoutine_CalcTwoPhaseProp(
+        two_phase_prop_list = self.GetTwoPhasePropList()
+        self.CalcTwoPhaseProp(
             props=two_phase_prop_list,
             phaseLabels=self.bstr_array_variant(
                 [
@@ -205,12 +205,13 @@ class ICapeThermoEquilibriumRoutine(ICapeThermoPropertyRoutine):
             ),
         )
         logging.debug("SINGLE PHASE PROP FINISHED")
+        return 0
 
-    def ICapeThermoEquilibriumRoutine_CheckEquilibriumSpec(
+    def CheckEquilibriumSpec(
         self,
         specification1,
         specification2,
-        _solutionType,
+        solutionType,
     ):
         """
         Checks whether this component can perform the Equilibrium
@@ -234,6 +235,7 @@ class ICapeThermoEquilibriumRoutine(ICapeThermoPropertyRoutine):
         """
         spec1 = self._as_list(specification1.value)
         spec2 = self._as_list(specification2.value)
+        soltype = str(solutionType)
         if not spec1 or not spec2:
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeInvalidArgument,
@@ -243,4 +245,7 @@ class ICapeThermoEquilibriumRoutine(ICapeThermoPropertyRoutine):
                 moreInfo="Both equilibrium specifications are required",
             )
         names = {str(spec1[0]).strip().lower(), str(spec2[0]).strip().lower()}
-        return names == {"temperature", "pressure"}
+        return names == {"temperature", "pressure"} and soltype in (
+            "Unspecified",
+            "Normal",
+        )

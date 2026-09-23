@@ -44,8 +44,10 @@ something like `ECapeUser_code` instead -- check your comtypes.gen module for th
 names it expects and rename the methods here to match.
 """
 
+from comtypes.gen import CAPEOPEN110
 
-class ECapeUser:
+
+class ECapeUser(CAPEOPEN110.ECapeUser):
     "ECapeUser Class with methods implemented"
 
     def __init__(self):

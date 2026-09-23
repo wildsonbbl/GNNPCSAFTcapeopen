@@ -1,13 +1,15 @@
 "ICapeThermoPhases"
 
+from comtypes.gen import CAPEOPEN110
+
 from .utils_common import GNNPCSAFTPPbase
 
 
-class ICapeThermoPhases(GNNPCSAFTPPbase):
+class ICapeThermoPhases(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoPhases):
     "ICapeThermoPhases Class with methods implemented"
 
     # --- ICapeThermoPhases ---
-    def ICapeThermoPhases_GetNumPhases(self):
+    def GetNumPhases(self):
         """
         Returns the number of Phases supported.
 
@@ -18,7 +20,7 @@ class ICapeThermoPhases(GNNPCSAFTPPbase):
         """
         return 2
 
-    def ICapeThermoPhases_GetPhaseInfo(self, phaseLabel, phaseAttribute):
+    def GetPhaseInfo(self, phaseLabel, phaseAttribute):
         """
         Returns information on an attribute associated with a Phase (e.g.
         StateOfAggregation, KeyCompoundId, ExcludedCompoundId,
@@ -39,29 +41,27 @@ class ICapeThermoPhases(GNNPCSAFTPPbase):
         result = {
             "1": {
                 "StateOfAggregation": "Liquid",
-                "KeyCompoundId": "UNDEFINED",
-                "ExcludedCompoundId": "UNDEFINED",
+                "KeyCompoundId": "",
+                "ExcludedCompoundId": "",
                 "DensityDescription": "Heavy",
                 "UserDescription": "Liquid phase",
-                "TypeOfSolid": "UNDEFINED",
+                "TypeOfSolid": "",
             },
             "2": {
                 "StateOfAggregation": "Vapor",
-                "KeyCompoundId": "UNDEFINED",
-                "ExcludedCompoundId": "UNDEFINED",
+                "KeyCompoundId": "",
+                "ExcludedCompoundId": "",
                 "DensityDescription": "Light",
                 "UserDescription": "Gas phase",
-                "TypeOfSolid": "UNDEFINED",
+                "TypeOfSolid": "",
             },
         }
 
         if phaseLabel in result and phaseAttribute in result[phaseLabel]:
             return result[phaseLabel][phaseAttribute]
-        return "UNDEFINED"
+        return ""
 
-    def ICapeThermoPhases_GetPhaseList(
-        self, phaseLabels, stateOfAggregation, keyCompoundId
-    ):
+    def GetPhaseList(self, phaseLabels, stateOfAggregation, keyCompoundId):
         """
         Returns Phase labels and other important descriptive information for
         all the Phases supported.
@@ -75,6 +75,6 @@ class ICapeThermoPhases(GNNPCSAFTPPbase):
         phaseLabels, stateOfAggregation, keyCompoundId = (
             self.bstr_array_variant(["1", "2"]),
             self.bstr_array_variant(["Liquid", "Vapor"]),
-            self.bstr_array_variant(["UNDEFINED", "UNDEFINED"]),
+            self.bstr_array_variant(["", ""]),
         )
         return phaseLabels, stateOfAggregation, keyCompoundId

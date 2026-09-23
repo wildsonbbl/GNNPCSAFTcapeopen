@@ -4,6 +4,7 @@ import copy
 import logging
 from typing import List
 
+from comtypes.gen import CAPEOPEN110
 from gnnepcsaft.pcsaft.feos import (
     critical_points_feos,
     pure_den_feos,
@@ -33,11 +34,11 @@ T_PROP_LIST = [
 ]
 
 
-class ICapeThermoCompounds(GNNPCSAFTPPbase):
+class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
     "ICapeThermoCompounds Class with methods implemented"
 
     # --- ICapeThermoCompounds ---
-    def ICapeThermoCompounds_GetCompoundConstant(self, props, compIds):
+    def GetCompoundConstant(self, props, compIds):
         """
         Returns the values of constant Physical Properties for the specified
         Compounds.
@@ -112,9 +113,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
                 logging.debug("CompoundConstant: %r", _propvals)
         return _propvals
 
-    def ICapeThermoCompounds_GetCompoundList(
-        self, _compIds, _formulae, _names, _boilTemps, _molwts, _casnos
-    ):
+    def GetCompoundList(self, compIds, formulae, names, boilTemps, molwts, casnos):
         """
         Returns the list of all Compounds, with identifiers and additional
         identifying information.
@@ -140,7 +139,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
             self.bstr_array_variant([""] * len(self.components_smiles)),
         )
 
-    def ICapeThermoCompounds_GetConstPropList(self):
+    def GetConstPropList(self):
         """
         Returns the list of supported constant Physical Properties (i.e.
         those retrievable via GetCompoundConstant).
@@ -156,7 +155,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
         )
         return self.bstr_array_variant(_CONST_PROPS)
 
-    def ICapeThermoCompounds_GetNumCompounds(self):
+    def GetNumCompounds(self):
         """
         Returns the number of Compounds supported.
 
@@ -171,9 +170,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
         )
         return len(self.components_smiles)
 
-    def ICapeThermoCompounds_GetPDependentProperty(
-        self, props, pressure, compIds, propvals_ptr
-    ):
+    def GetPDependentProperty(self, props, pressure, compIds, propVals):
         """
         Returns the values of pressure-dependent Physical Properties for the
         specified pure Compounds.
@@ -193,7 +190,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
             ECapeThrmPropertyNotAvailable, ECapeUnknown, ECapeBadInvOrder.
         """
 
-    def ICapeThermoCompounds_GetPDependentPropList(self):
+    def GetPDependentPropList(self):
         """
         Returns the list of supported pressure-dependent properties (i.e.
         those retrievable via GetPDependentProperty).
@@ -205,9 +202,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
         """
         return self.empty_array_variant()
 
-    def ICapeThermoCompounds_GetTDependentProperty(
-        self, props, temperature, compIds, _propvals_ptr
-    ):
+    def GetTDependentProperty(self, props, temperature, compIds, propVals):
         """
         Returns the values of temperature-dependent Physical Properties for
         the specified pure Compounds.
@@ -258,7 +253,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
                 logging.debug("TDependetProperty: %r", _propvals)
         return _propvals
 
-    def ICapeThermoCompounds_GetTDependentPropList(self):
+    def GetTDependentPropList(self):
         """
         Returns the list of supported temperature-dependent properties (i.e.
         those retrievable via GetTDependentProperty).

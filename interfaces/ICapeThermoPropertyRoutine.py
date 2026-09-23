@@ -5,6 +5,7 @@ import logging
 from typing import List
 
 import numpy as np
+from comtypes.gen import CAPEOPEN110
 from gnnepcsaft.pcsaft.pcsaft_feos import (
     mix_bp_at_fixed_pressure_feos,
     mix_den_feos,
@@ -39,17 +40,23 @@ CAPE_P_DERIVATIVE = 4
 CAPE_MOLE_NUMBERS_DERIVATIVES = 8
 
 
-class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
+class ICapeThermoPropertyRoutine(
+    GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoPropertyRoutine
+):
     "ICapeThermoPropertyRoutine Class with methods implemented"
 
     # --- ICapeThermoPropertyRoutine ---
-    def ICapeThermoPropertyRoutine_CalcAndGetLnPhi(
+    def CalcAndGetLnPhi(
         self,
         phaseLabel,
         temperature,
         pressure,
         moleNumbers,
         fFlags,
+        lnPhi,
+        lnPhiDT,
+        lnPhiDP,
+        lnPhiDn,
     ):
         """
         Calculates the natural logarithm of the fugacity coefficients (and
@@ -106,13 +113,11 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
         ln_phi = mix_ln_fugacity_coefficient(pcsaft_parameters, state, _kij_matrix)
         return np.asarray(ln_phi).tolist()
 
-    def ICapeThermoPropertyRoutine_CalcSinglePhaseProp(self, props, phaseLabel):
+    def CalcSinglePhaseProp(self, props, phaseLabel):
         """Calculates properties/derivatives that depend on one phase"""
         _co_properties = self._as_list(props.value)
         if any(
-            not self.ICapeThermoPropertyRoutine_CheckSinglePhasePropSpec(
-                co_property=prop, phaseLabel=phaseLabel
-            )
+            not self.CheckSinglePhasePropSpec(property=prop, phaseLabel=phaseLabel)
             for prop in _co_properties
         ):
             self.raise_cape_error(
@@ -158,7 +163,7 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
                 pass
 
         for prop, value in computed.items():
-            logging.debug("IN CalcTwoPhaseProp --->%r = %r", prop, value)
+            logging.debug("IN CalcSinglePhaseProp --->%r = %r", prop, value)
             if prop in _SINGLE_PHASE_PROPS_MOLE:
                 material.SetSinglePhaseProp(
                     prop, phaseLabel, "Mole", self.r8_array_variant(value)
@@ -167,9 +172,9 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
                 material.SetSinglePhaseProp(
                     prop, phaseLabel, None, self.r8_array_variant(value)
                 )
-        return
+        return 0
 
-    def ICapeThermoPropertyRoutine_CalcTwoPhaseProp(self, props, phaseLabels):
+    def CalcTwoPhaseProp(self, props, phaseLabels):
         """
         Calculates mixture properties/derivatives that depend on two Phases
         (e.g. surface tension, K-values) at the current T/P/composition of
@@ -258,10 +263,9 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
                 "Mole",
                 self.r8_array_variant(value),
             )
+        return 0
 
-    def ICapeThermoPropertyRoutine_CheckSinglePhasePropSpec(
-        self, co_property, phaseLabel
-    ):
+    def CheckSinglePhasePropSpec(self, property, phaseLabel):
         """
         Checks whether CalcSinglePhaseProp can calculate the given property
         for the given Phase. Depends only on this component's capabilities
@@ -278,11 +282,9 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
 
         Raises (per spec): ECapeNoImpl, ECapeInvalidArgument, ECapeUnknown.
         """
-        return co_property in _SINGLE_PHASE_PROPS and phaseLabel in _PHASE_LABELS
+        return property in _SINGLE_PHASE_PROPS and phaseLabel in _PHASE_LABELS
 
-    def ICapeThermoPropertyRoutine_CheckTwoPhasePropSpec(
-        self, co_property, phaseLabels
-    ):
+    def CheckTwoPhasePropSpec(self, property, phaseLabels):
         """
         Checks whether CalcTwoPhaseProp can calculate the given property for
         the given pair of Phases. Depends only on this component's
@@ -301,12 +303,12 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
         """
         _co_phase_labels = self._as_list(phaseLabels.value)
         return (
-            str(co_property) in _TWO_PHASE_PROPS
+            str(property) in _TWO_PHASE_PROPS
             and len(_co_phase_labels) == 2
             and all(label in _PHASE_LABELS for label in _co_phase_labels)
         )
 
-    def ICapeThermoPropertyRoutine_GetSinglePhasePropList(self):
+    def GetSinglePhasePropList(self):
         """
         Returns the list of supported non-constant single-phase properties
         (i.e. those calculable by CalcSinglePhaseProp), including derivatives.
@@ -318,7 +320,7 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
         """
         return self.bstr_array_variant(list(_SINGLE_PHASE_PROPS))
 
-    def ICapeThermoPropertyRoutine_GetTwoPhasePropList(self):
+    def GetTwoPhasePropList(self):
         """
         Returns the list of supported non-constant two-phase properties
         (i.e. those calculable by CalcTwoPhaseProp), including derivatives.

@@ -24,14 +24,7 @@ SMILES strings the user entered, ready to be consumed by the rest of your
 Property Package (building the component list, calling RDKit, etc.).
 """
 
-try:
-    from comtypes.gen import CAPEOPEN110 as _CO
-except ImportError:
-    # Fall back name if your generated wrapper module is called differently
-    # (e.g. CAPEOPEN100). Adjust the import above to match your environment.
-    _CO = None
-
-
+from comtypes.gen import CAPEOPEN110
 from gnnepcsaft_mcp_server.utils import predict_pcsaft_parameters
 
 from .ecape_errors import (
@@ -48,7 +41,7 @@ from .utils_common import GNNPCSAFTPPbase, PMCState
 # ---------------------------------------------------------------------------
 
 
-class ICapeUtilities(GNNPCSAFTPPbase):
+class ICapeUtilities(GNNPCSAFTPPbase, CAPEOPEN110.ICapeUtilities):
     "ICapeUtilities Class with methods implemented"
 
     def __init__(self):
@@ -75,20 +68,21 @@ class ICapeUtilities(GNNPCSAFTPPbase):
         )
 
     # -- SetSimulationContext ----------------------------------------------
-    def _set_simulationContext(self, simContext):
+    def _set_simulationContext(self, rhs):
         """
         Store the reference to the PME's simulation context so it can be
         used later (e.g. to create thermo material objects, report
         diagnostics, or use unit conversion services).
         """
-        if simContext is None:
+        if rhs is None:
             self.raise_cape_error(
                 ECapeInvalidArgument,
                 "simContext must not be NULL.",
                 interfaceName="ICapeUtilities",
                 operation="SetSimulationContext",
             )
-        self.simulation_context = simContext
+        self.simulation_context = rhs
+        return 0
 
     # -- Initialize ----------------------------------------------------------
     def Initialize(self):
@@ -103,7 +97,7 @@ class ICapeUtilities(GNNPCSAFTPPbase):
         """
         if self.components_smiles is not None and self.pcsaft_parameters is not None:
             self._pmc_state = PMCState.EXECUTING
-            return
+            return 0
 
         if self._pmc_state != PMCState.NON_INITIALIZED:
             self.raise_cape_error(
@@ -143,6 +137,7 @@ class ICapeUtilities(GNNPCSAFTPPbase):
             predict_pcsaft_parameters(smiles) for smiles in self.components_smiles
         ]
         self._pmc_state = PMCState.EXECUTING
+        return 0
 
     # -- Terminate -----------------------------------------------------------
     def Terminate(self):
@@ -182,6 +177,7 @@ class ICapeUtilities(GNNPCSAFTPPbase):
             )
         finally:
             self._pmc_state = PMCState.TERMINATED
+        return 0
 
     # -- Edit ------------------------------------------------------------
     def Edit(self):
@@ -217,3 +213,4 @@ class ICapeUtilities(GNNPCSAFTPPbase):
             # NOTE: per UC-004, the PME is responsible for detecting that
             # PMC state (component list) changed after Edit() returns and
             # re-integrating it (e.g. re-checking ports/connections).
+        return 0

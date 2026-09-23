@@ -1,5 +1,7 @@
 "ICapeThermoUniversalConstant"
 
+from comtypes.gen import CAPEOPEN110
+
 from .ecape_errors import ECapeInvalidArgument
 from .utils_common import GNNPCSAFTPPbase
 
@@ -13,11 +15,13 @@ _UNIVERSAL_CONSTANTS = {
 }
 
 
-class ICapeThermoUniversalConstant(GNNPCSAFTPPbase):
+class ICapeThermoUniversalConstant(
+    GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoUniversalConstant
+):
     "ICapeThermoUniversalConstant Class with methods implemented"
 
     # --- ICapeThermoUniversalConstant ---
-    def ICapeThermoUniversalConstant_GetUniversalConstant(self, constantId):
+    def GetUniversalConstant(self, constantId):
         """
         Retrieves the value of a Universal Constant (e.g. avogadroConstant,
         boltzmannConstant, idealGasStateReferencePressure, molarGasConstant,
@@ -42,7 +46,7 @@ class ICapeThermoUniversalConstant(GNNPCSAFTPPbase):
             operation="GetUniversalConstant",
         )
 
-    def ICapeThermoUniversalConstant_GetUniversalConstantList(self):
+    def GetUniversalConstantList(self):
         """
         Returns the identifiers of the supported Universal Constants.
 
