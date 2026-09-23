@@ -25,6 +25,13 @@ _CONST_PROPS = [
     "normalBoilingPoint",
 ]
 
+T_PROP_LIST = [
+    "heatCapacityOfLiquid",
+    "heatOfVaporization",
+    "vaporPressure",
+    "volumeOfLiquid",
+]
+
 
 class ICapeThermoCompounds(GNNPCSAFTPPbase):
     "ICapeThermoCompounds Class with methods implemented"
@@ -85,6 +92,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
                             pcsaft_parameters[idx],
                             [298.15],
                         )
+                        * 1000.0
                     )
                 if key == "liquidDensityAt25C":
                     _propvals.append(
@@ -117,24 +125,19 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        # TODO: set up formulae, boiltemps and casnos...
-
         self._require_components(
             interfaceName="ICapeThermoCompounds",
             operation="GetCompoundList",
         )
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
+        assert pcsaft_parameters is not None
 
         return (
             self.bstr_array_variant(self.components_smiles),
             self.bstr_array_variant([""] * len(self.components_smiles)),
             self.bstr_array_variant(self.components_smiles),
             self.r8_array_variant([float("nan")] * len(self.components_smiles)),
-            self.r8_array_variant(
-                [parameters[8] for parameters in pcsaft_parameters]
-                if pcsaft_parameters is not None
-                else [float("nan")] * len(self.components_smiles)
-            ),
+            self.r8_array_variant([parameters[8] for parameters in pcsaft_parameters]),
             self.bstr_array_variant([""] * len(self.components_smiles)),
         )
 
@@ -148,7 +151,6 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        # TODO: listar mais propriedades constantes suportadas aqui...
         self._require_components(
             interfaceName="ICapeThermoCompounds",
             operation="GetConstPropList",
@@ -191,14 +193,6 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
             ECapeInvalidArgument, ECapeOutOfBounds,
             ECapeThrmPropertyNotAvailable, ECapeUnknown, ECapeBadInvOrder.
         """
-        # TODO: calcular as propriedades dependentes de pressão aqui...
-
-        with safearray_as_ndarray:
-            _props = copy.copy(props.value)
-            _compIds = copy.copy(compIds.value)
-
-        _propvals = self.r8_array_variant([float("nan")] * len(_compIds) * len(_props))
-        return _propvals
 
     def ICapeThermoCompounds_GetPDependentPropList(self):
         """
@@ -210,12 +204,10 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        # TODO: listar as propriedades dependentes de pressão suportadas aqui...
-
-        return self.bstr_array_variant(["UNDEFINED"])
+        return self.empty_array_variant()
 
     def ICapeThermoCompounds_GetTDependentProperty(
-        self, props, temperature, compIds, propvals_ptr
+        self, props, temperature, compIds, _propvals_ptr
     ):
         """
         Returns the values of temperature-dependent Physical Properties for
@@ -235,13 +227,36 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
             ECapeInvalidArgument, ECapeOutOfBounds,
             ECapeThrmPropertyNotAvailable, ECapeUnknown, ECapeBadInvOrder.
         """
-        # TODO: calcular as propriedades dependentes de temperatura aqui...
-
         with safearray_as_ndarray:
-            _props = copy.copy(props.value)
-            _compIds = copy.copy(compIds.value)
+            co_props = copy.copy(props.value)
+            co_compIds = copy.copy(compIds.value)
 
-        _propvals = self.r8_array_variant([float("nan")] * len(_compIds) * len(_props))
+        requested_props = [str(p) for p in self._as_list(co_props)]
+        indices = self._compound_indices(co_compIds)
+        pcsaft_parameters = copy.copy(self.pcsaft_parameters)
+        assert pcsaft_parameters is not None
+        _propvals: List[float] = []
+        for prop in requested_props:
+            key = prop.strip()
+            for idx in indices:
+                if key == "vaporPressure":
+                    _propvals.append(
+                        pure_vp_feos(pcsaft_parameters[idx], [temperature])
+                    )
+                if key == "volumeOfLiquid":
+                    vp = pure_vp_feos(pcsaft_parameters[idx], [temperature])
+                    _propvals.append(
+                        1 / pure_den_feos(pcsaft_parameters[idx], [temperature, vp])
+                    )
+                if key in (
+                    "heatCapacityOfLiquid",
+                    "heatOfVaporization",
+                ):
+                    h_lv = pure_h_lv_feos(pcsaft_parameters[0], [temperature]) * 1000.0
+                    if key == "heatCapacityOfLiquid":
+                        _propvals.append(h_lv / temperature)
+                    else:
+                        _propvals.append(h_lv)
         return _propvals
 
     def ICapeThermoCompounds_GetTDependentPropList(self):
@@ -254,9 +269,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        # TODO: listar as propriedades dependentes de temperatura suportadas aqui...
-
-        return self.bstr_array_variant(["UNDEFINED"])
+        return self.bstr_array_variant(T_PROP_LIST)
 
     def _compound_indices(self, compIds):
         if compIds is None:

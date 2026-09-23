@@ -7,7 +7,7 @@ from typing import List, Optional
 
 import numpy as np
 from comtypes import BSTR, COMError
-from comtypes.automation import VARIANT
+from comtypes.automation import VARIANT, VT_EMPTY
 from comtypes.gen import CAPEOPEN110
 from comtypes.safearray import _midlSAFEARRAY
 
@@ -44,6 +44,12 @@ class GNNPCSAFTPPbase(ECapeUser):
         sa = array.array("l", values)
         i4_array = VARIANT(sa)
         return i4_array
+
+    def empty_array_variant(self):
+        "make empty array"
+        empty_array = VARIANT()
+        empty_array.vt = VT_EMPTY
+        return empty_array
 
     def _require_components(self, interfaceName, operation):
         if self.pcsaft_parameters is None:
