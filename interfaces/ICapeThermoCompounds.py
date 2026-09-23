@@ -4,9 +4,26 @@ import copy
 from typing import List
 
 from comtypes.safearray import safearray_as_ndarray
+from gnnepcsaft.pcsaft.feos import (
+    critical_points_feos,
+    pure_den_feos,
+    pure_h_lv_feos,
+    pure_vp_feos,
+)
 
 from . import ecape_errors
 from .utils_common import GNNPCSAFTPPbase
+
+_CONST_PROPS = [
+    "molecularWeight",
+    "SMILESformula",
+    "criticalDensity",
+    "criticalPressure",
+    "criticalTemperature",
+    "heatOfVaporizationAtNormalBoilingPoint",
+    "liquidDensityAt25C",
+    "normalBoilingPoint",
+]
 
 
 class ICapeThermoCompounds(GNNPCSAFTPPbase):
@@ -33,21 +50,48 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
             ECapeLimitedImpl, ECapeInvalidArgument, ECapeUnknown,
             ECapeBadInvOrder.
         """
-        # TODO: buscar/calcular as constantes dos compostos aqui...
 
         with safearray_as_ndarray:
-            props = copy.copy(props.value)
-            compIds = copy.copy(compIds.value)
+            co_props = copy.copy(props.value)
+            co_compIds = copy.copy(compIds.value)
 
-        requested_props = [str(p) for p in self._as_list(props)]
-        indices = self._compound_indices(compIds)
+        requested_props = [str(p) for p in self._as_list(co_props)]
+        indices = self._compound_indices(co_compIds)
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
-        propvals: List[float] = []
+        assert pcsaft_parameters is not None
+        _propvals: List[float] = []
         for prop in requested_props:
-            key = prop.strip().lower()
+            key = prop.strip()
             for idx in indices:
-                if (key == "molecularweight") and (pcsaft_parameters is not None):
-                    propvals.append(pcsaft_parameters[idx][8])
+                if key == "molecularWeight":
+                    _propvals.append(pcsaft_parameters[idx][8])
+                if key == "SMILESformula":
+                    _propvals.append(co_compIds[idx])
+                if key in (
+                    "criticalDensity",
+                    "criticalPressure",
+                    "criticalTemperature",
+                ):
+                    tc, pc, dc = critical_points_feos(pcsaft_parameters[idx])
+                    if key == "criticalDensity":
+                        _propvals.append(dc)
+                    if key == "criticalPressure":
+                        _propvals.append(pc)
+                    if key == "criticalTemperature":
+                        _propvals.append(tc)
+                if key == "heatOfVaporizationAtNormalBoilingPoint":
+                    _propvals.append(
+                        pure_h_lv_feos(
+                            pcsaft_parameters[idx],
+                            [298.15],
+                        )
+                    )
+                if key == "liquidDensityAt25C":
+                    _propvals.append(
+                        pure_den_feos(pcsaft_parameters[idx], [298.15, 101325.0])
+                    )
+                if key == "normalBoilingPoint":
+                    _propvals.append(pure_vp_feos(pcsaft_parameters[idx], [298.15]))
                 else:
 
                     self.raise_cape_error(
@@ -59,7 +103,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
                         interfaceName="ICapeThermoCompounds",
                         operation="GetCompoundConstant",
                     )
-        return propvals
+        return _propvals
 
     def ICapeThermoCompounds_GetCompoundList(
         self, _compIds, _formulae, _names, _boilTemps, _molwts, _casnos
@@ -109,7 +153,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
             interfaceName="ICapeThermoCompounds",
             operation="GetConstPropList",
         )
-        return self.bstr_array_variant(["molecularWeight"])
+        return self.bstr_array_variant(_CONST_PROPS)
 
     def ICapeThermoCompounds_GetNumCompounds(self):
         """
