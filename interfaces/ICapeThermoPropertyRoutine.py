@@ -21,10 +21,10 @@ _SINGLE_PHASE_PROPS = (
     "density",
     "logFugacityCoefficient",
     "molecularWeight",
-    "dewPressure",
-    "bubblePressure",
-    "dewTemperature",
-    "bubbleTemperature",
+    "dewPointPressure",
+    "bubblePointPressure",
+    "dewPointTemperature",
+    "bubblePointTemperature",
 )
 _SINGLE_PHASE_PROPS_MOLE = ("density",)
 _TWO_PHASE_PROPS = ("kvalue", "logKvalue")
@@ -346,20 +346,20 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
                     for frac, params in zip(state[1:], pcsaft_parameters)
                 )
             ]
-        if prop in ("dewPressure", "bubblePressure"):
+        if prop in ("dewPointPressure", "bubblePointPressure"):
             bp, dp = mix_vp_feos(
                 parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
             )
-            if prop == "bubblePressure":
+            if prop == "bubblePointPressure":
                 return [bp]
             return [dp]
-        if prop == "dewTemperature":
+        if prop == "dewPointTemperature":
             return [
                 mix_dp_at_fixed_pressure_feos(
                     parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
                 )
             ]
-        if prop == "bubbleTemperature":
+        if prop == "bubblePointTemperature":
             return [
                 mix_bp_at_fixed_pressure_feos(
                     parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
