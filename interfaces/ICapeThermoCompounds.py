@@ -1,9 +1,9 @@
 "ICapeThermoCompounds"
 
 import copy
+import logging
 from typing import List
 
-from comtypes.safearray import safearray_as_ndarray
 from gnnepcsaft.pcsaft.feos import (
     critical_points_feos,
     pure_den_feos,
@@ -57,12 +57,11 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
             ECapeLimitedImpl, ECapeInvalidArgument, ECapeUnknown,
             ECapeBadInvOrder.
         """
-
-        with safearray_as_ndarray:
-            co_props = copy.copy(props.value)
-            co_compIds = copy.copy(compIds.value)
+        co_props = copy.copy(props.value)
+        co_compIds = copy.copy(list(compIds.value))
 
         requested_props = [str(p) for p in self._as_list(co_props)]
+        logging.debug("REQUESTED PROPS = %r", requested_props)
         indices = self._compound_indices(co_compIds)
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
         assert pcsaft_parameters is not None
@@ -100,17 +99,17 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
                     )
                 if key == "normalBoilingPoint":
                     _propvals.append(pure_vp_feos(pcsaft_parameters[idx], [298.15]))
-                else:
-
+                if key not in _CONST_PROPS:
                     self.raise_cape_error(
                         error_cls=ecape_errors.ECapeThrmPropertyNotAvailable,
                         description=(
                             f"Requested compound constant ({key}) are not available;"
-                            " only 'molecularWeight' is supported by this Property Package"
+                            f" only {_CONST_PROPS} are supported by this Property Package"
                         ),
                         interfaceName="ICapeThermoCompounds",
                         operation="GetCompoundConstant",
                     )
+                logging.debug("CompoundConstant: %r", _propvals)
         return _propvals
 
     def ICapeThermoCompounds_GetCompoundList(
@@ -227,9 +226,8 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
             ECapeInvalidArgument, ECapeOutOfBounds,
             ECapeThrmPropertyNotAvailable, ECapeUnknown, ECapeBadInvOrder.
         """
-        with safearray_as_ndarray:
-            co_props = copy.copy(props.value)
-            co_compIds = copy.copy(compIds.value)
+        co_props = copy.copy(props.value)
+        co_compIds = copy.copy(compIds.value)
 
         requested_props = [str(p) for p in self._as_list(co_props)]
         indices = self._compound_indices(co_compIds)
@@ -257,6 +255,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase):
                         _propvals.append(h_lv / temperature)
                     else:
                         _propvals.append(h_lv)
+                logging.debug("TDependetProperty: %r", _propvals)
         return _propvals
 
     def ICapeThermoCompounds_GetTDependentPropList(self):
