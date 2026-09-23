@@ -29,19 +29,19 @@ class GNNPCSAFTPPbase(ECapeUser):
 
     def bstr_array_variant(self, values: List[str]):
         "make array with type VT_ARRAY | VT_BSTR"
-        sa = _midlSAFEARRAY(BSTR).from_param(values)
+        sa = _midlSAFEARRAY(BSTR).from_param(list(values))
         bstr_array = VARIANT(sa)
         return bstr_array
 
     def r8_array_variant(self, values: List[float]):
         "make array with type VT_ARRAY | VT_R8"
-        sa = array.array("d", values)
+        sa = array.array("d", list(values))
         r8_array = VARIANT(sa)
         return r8_array
 
     def i4_array_variant(self, values: List[int]):
         "make array with type VT_ARRAY | VT_I4"
-        sa = array.array("l", values)
+        sa = array.array("l", list(values))
         i4_array = VARIANT(sa)
         return i4_array
 
