@@ -149,9 +149,13 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
 
         # Compute everything before writing anything back (a partial failure
         # must not leave partial results in the Material Object).
-        computed = {
-            prop: self._compute_single_phase_property(prop, state) for prop in requested
-        }
+        computed = {}
+        for prop in requested:
+            try:
+                computed[prop] = self._compute_single_phase_property(prop, state)
+            except Exception:  # pylint:disable=broad-exception-caught
+                pass
+
         for prop, value in computed.items():
             if prop in _SINGLE_PHASE_PROPS_MOLE:
                 material.SetSinglePhaseProp(
@@ -354,17 +358,27 @@ class ICapeThermoPropertyRoutine(GNNPCSAFTPPbase):
                 return [bp]
             return [dp]
         if prop == "dewPointTemperature":
-            return [
-                mix_dp_at_fixed_pressure_feos(
-                    parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
-                )
-            ]
+            try:
+                return [
+                    mix_dp_at_fixed_pressure_feos(
+                        parameters=pcsaft_parameters,
+                        state=state,
+                        kij_matrix=_kij_matrix,
+                    )
+                ]
+            except Exception:  # pylint:disable=broad-exception-caught
+                return [float("nan")]
         if prop == "bubblePointTemperature":
-            return [
-                mix_bp_at_fixed_pressure_feos(
-                    parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
-                )
-            ]
+            try:
+                return [
+                    mix_bp_at_fixed_pressure_feos(
+                        parameters=pcsaft_parameters,
+                        state=state,
+                        kij_matrix=_kij_matrix,
+                    )
+                ]
+            except Exception:  # pylint:disable=broad-exception-caught
+                return [float("nan")]
 
         return []
 
