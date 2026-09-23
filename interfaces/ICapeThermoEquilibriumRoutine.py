@@ -125,7 +125,8 @@ class ICapeThermoEquilibriumRoutine(ICapeThermoPropertyRoutine):
         liquid_beta = self._phase_attr(result.liquid, ("phase_fraction", "beta"))
         vapor_beta = self._phase_attr(result.vapor, ("phase_fraction", "beta"))
         logging.debug(
-            "Passed getting tp flash: %s", [liquid_fractions, vapor_fractions]
+            "Passed getting tp flash: [liquid_fractions, vapor_fractions] == %s",
+            [liquid_fractions, vapor_fractions],
         )
 
         self.material.SetPresentPhases(
@@ -193,11 +194,23 @@ class ICapeThermoEquilibriumRoutine(ICapeThermoPropertyRoutine):
                 self.r8_array_variant([liquid_beta]),
             )
 
+        two_phase_prop_list = self.ICapeThermoPropertyRoutine_GetTwoPhasePropList()
+        self.ICapeThermoPropertyRoutine_CalcTwoPhaseProp(
+            props=two_phase_prop_list,
+            phaseLabels=self.bstr_array_variant(
+                [
+                    _PHASE_LABELS_MAPPING["Vapor"],
+                    _PHASE_LABELS_MAPPING["Liquid"],
+                ]
+            ),
+        )
+        logging.debug("SINGLE PHASE PROP FINISHED")
+
     def ICapeThermoEquilibriumRoutine_CheckEquilibriumSpec(
         self,
         specification1,
         specification2,
-        solutionType,
+        _solutionType,
     ):
         """
         Checks whether this component can perform the Equilibrium
