@@ -60,6 +60,7 @@ class GNNPCSAFTPropertyPackage(
     _reg_progid_ = PROGID
     _reg_desc_ = "GNNPCSAFT Property Package"
     _reg_clsctx_ = CLSCTX_INPROC_SERVER
+    _reg_threading_ = "Apartment"
 
     _com_interfaces_ = [
         CAPEOPEN110.ICapeIdentification,
