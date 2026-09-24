@@ -8,7 +8,6 @@ import numpy as np
 from comtypes.gen import CAPEOPEN110
 from gnnepcsaft.pcsaft.pcsaft_feos import (
     mix_bp_at_fixed_pressure_feos,
-    mix_den_feos,
     mix_dp_at_fixed_pressure_feos,
     mix_ln_activity_coefficient,
     mix_ln_fugacity_coefficient,
@@ -16,6 +15,7 @@ from gnnepcsaft.pcsaft.pcsaft_feos import (
 )
 
 from . import ecape_errors
+from .pc_saft_feos import mix_den_feos
 from .utils_common import GNNPCSAFTPPbase
 
 _SINGLE_PHASE_PROPS = (
@@ -23,10 +23,6 @@ _SINGLE_PHASE_PROPS = (
     "density",
     "logFugacityCoefficient",
     "molecularWeight",
-    "dewPointPressure",
-    "bubblePointPressure",
-    "dewPointTemperature",
-    "bubblePointTemperature",
 )
 _SINGLE_PHASE_PROPS_MOLE = ("density",)
 _TWO_PHASE_PROPS = ("kvalue", "logKvalue")
@@ -114,7 +110,18 @@ class ICapeThermoPropertyRoutine(
         return np.asarray(ln_phi).tolist()
 
     def CalcSinglePhaseProp(self, props, phaseLabel):
-        """Calculates properties/derivatives that depend on one phase"""
+        """Calculates properties/derivatives that depend on one phase.
+
+        COMMETHOD(
+                [dispid(2), helpstring('method CalcSinglePhaseProp')],
+                HRESULT,
+                'CalcSinglePhaseProp',
+                (['in'], VARIANT, 'props'),
+                (['in'], BSTR, 'phaseLabel')
+            )
+
+
+        """
         _co_properties = self._as_list(props.value)
         if any(
             not self.CheckSinglePhasePropSpec(property=prop, phaseLabel=phaseLabel)
@@ -158,12 +165,19 @@ class ICapeThermoPropertyRoutine(
         computed = {}
         for prop in requested:
             try:
-                computed[prop] = self._compute_single_phase_property(prop, state)
+                computed[prop] = self._compute_single_phase_property(
+                    prop, state, phaseLabel
+                )
             except Exception:  # pylint:disable=broad-exception-caught
                 pass
 
         for prop, value in computed.items():
-            logging.debug("IN CalcSinglePhaseProp --->%r = %r", prop, value)
+            logging.debug(
+                "IN CalcSinglePhaseProp --->%r = %r for phaseLable = %r",
+                prop,
+                value,
+                phaseLabel,
+            )
             if prop in _SINGLE_PHASE_PROPS_MOLE:
                 material.SetSinglePhaseProp(
                     prop, phaseLabel, "Mole", self.r8_array_variant(value)
@@ -332,7 +346,7 @@ class ICapeThermoPropertyRoutine(
         """
         return self.bstr_array_variant(list(_TWO_PHASE_PROPS))
 
-    def _compute_single_phase_property(self, prop, state) -> List[float]:
+    def _compute_single_phase_property(self, prop, state, phaseLabel) -> List[float]:
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
         _kij_matrix = copy.copy(self._kij_matrix)
         assert pcsaft_parameters is not None
@@ -349,6 +363,7 @@ class ICapeThermoPropertyRoutine(
                     parameters=pcsaft_parameters,
                     state=state,
                     kij_matrix=_kij_matrix,
+                    density_initialization=phaseLabel.lower(),
                 )
             ]
         if prop == "logFugacityCoefficient":
@@ -390,7 +405,7 @@ class ICapeThermoPropertyRoutine(
             except Exception:  # pylint:disable=broad-exception-caught
                 return [float("nan")]
 
-        return []
+        return [float("nan")]
 
     def _require_phase_label(self, phaseLabel):
         if phaseLabel not in _PHASE_LABELS:
