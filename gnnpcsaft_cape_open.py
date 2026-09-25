@@ -16,8 +16,10 @@ writes calculated properties back into it. Property calculations
 Property Package is expected to implement both.
 """
 
+import logging
 import sys
 import winreg
+from pathlib import Path
 from typing import Iterable, Sequence
 
 from comtypes import (
@@ -44,6 +46,16 @@ from gnnepcsaft_mcp_server.utils import predict_pcsaft_parameters
 import interfaces
 from interfaces.ecape_errors import ECapeInvalidArgument
 
+working_dir = Path(__file__).parent
+
+logging.basicConfig(
+    filename=working_dir / "app.log",  # Name of the log file
+    filemode="a",  # 'a' to append, 'w' to overwrite
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.DEBUG,  # Minimum log level to capture
+)
+
+
 CLSID = "{A3F10E65-3852-4C10-9D45-6B9A8C110001}"
 PROGID = "wildsonbbl.gnnpcsaftPP"
 CATEGORY_ID = "{CF51E384-0110-4ed8-ACB7-B50CFDE6908E}"
@@ -61,6 +73,7 @@ class GNNPCSAFTPropertyPackage(
     _reg_desc_ = "GNNPCSAFT Property Package"
     _reg_clsctx_ = CLSCTX_INPROC_SERVER
     _reg_threading_ = "Apartment"
+    _regcls_ = 2
 
     _com_interfaces_ = [
         CAPEOPEN110.ICapeIdentification,
