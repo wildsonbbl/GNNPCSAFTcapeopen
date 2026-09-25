@@ -66,7 +66,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
         indices = self._compound_indices(co_compIds)
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
         assert pcsaft_parameters is not None
-        _propvals: List[float] = []
+        _propvals = []
         for prop in requested_props:
             key = prop.strip()
             for idx in indices:
@@ -251,7 +251,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                     else:
                         _propvals.append(h_lv)
                 logging.debug("TDependetProperty: %r", _propvals)
-        return _propvals
+        return self.r8_array_variant(_propvals)
 
     def GetTDependentPropList(self):
         """

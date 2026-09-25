@@ -107,7 +107,12 @@ class ICapeThermoPropertyRoutine(
             )
         state = [float(temperature), float(pressure), *fractions]
         ln_phi = mix_ln_fugacity_coefficient(pcsaft_parameters, state, _kij_matrix)
-        return np.asarray(ln_phi).tolist()
+        return (
+            self.r8_array_variant(ln_phi),
+            self.empty_array_variant(),
+            self.empty_array_variant(),
+            self.empty_array_variant(),
+        )
 
     def CalcSinglePhaseProp(self, props, phaseLabel):
         """Calculates properties/derivatives that depend on one phase.

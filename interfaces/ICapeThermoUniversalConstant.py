@@ -55,4 +55,4 @@ class ICapeThermoUniversalConstant(
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown.
         """
-        return list(_UNIVERSAL_CONSTANTS)
+        return self.bstr_array_variant(list(_UNIVERSAL_CONSTANTS))
