@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 import numpy as np
+import psutil
 from comtypes import BSTR, COMError
 from comtypes.automation import VARIANT, VT_EMPTY
 from comtypes.gen import CAPEOPEN110
@@ -15,6 +16,8 @@ from . import ecape_errors
 from .ecape_user import ECapeUser
 
 _SMILES_CHAR_RE = re.compile(r"^[A-Za-z0-9@+\-\[\]\(\)=#\\/%.:*$]+$")
+
+proc = psutil.Process()
 
 
 class GNNPCSAFTPPbase(ECapeUser):
@@ -26,6 +29,10 @@ class GNNPCSAFTPPbase(ECapeUser):
     _kij_matrix: Optional[List[List[float]]] = None
     _pmc_state: str = "non_initialized"
     simulation_context: Optional[CAPEOPEN110.ICapeSimulationContext] = None
+
+    def rss_mb(self):
+        "check process memory"
+        return proc.memory_info().rss / (1024 * 1024)
 
     def bstr_array_variant(self, values: List[str]):
         "make array with type VT_ARRAY | VT_BSTR"

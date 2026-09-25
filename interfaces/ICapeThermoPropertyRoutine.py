@@ -186,6 +186,8 @@ class ICapeThermoPropertyRoutine(
                 material.SetSinglePhaseProp(
                     prop, phaseLabel, None, self.r8_array_variant(value)
                 )
+        rss_mb = self.rss_mb()
+        logging.debug("PROCESS MEMORY: %r MB", rss_mb)
         return 0
 
     def CalcTwoPhaseProp(self, props, phaseLabels):
@@ -277,6 +279,8 @@ class ICapeThermoPropertyRoutine(
                 "Mole",
                 self.r8_array_variant(value),
             )
+        rss_mb = self.rss_mb()
+        logging.debug("PROCESS MEMORY: %r MB", rss_mb)
         return 0
 
     def CheckSinglePhasePropSpec(self, property, phaseLabel):

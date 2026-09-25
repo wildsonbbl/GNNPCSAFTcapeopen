@@ -408,6 +408,9 @@ class ICapeThermoEquilibriumRoutine(
                 self.r8_array_variant([liquid_beta]),
             )
 
+        rss_mb = self.rss_mb()
+        logging.debug("PROCESS MEMORY: %r MB", rss_mb)
+
     def _get_vl_beta(self, fractions, liquid_fractions, vapor_fractions):
         vapor_beta = 0.0
         liquid_beta = 1.0 - vapor_beta
