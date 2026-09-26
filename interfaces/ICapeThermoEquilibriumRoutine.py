@@ -99,7 +99,7 @@ class ICapeThermoEquilibriumRoutine(
             state = [temperature, pressure, entropy, *fractions]
         state_for_stability = [temperature, pressure, *fractions]
 
-        logging.debug("FROM MATERIAL ---> state = %s", state)
+        logging.debug("IN CalcEquilibrium ---> state = %s", state)
 
         material.SetPresentPhases(
             self.bstr_array_variant(["Vapor", "Liquid"]),

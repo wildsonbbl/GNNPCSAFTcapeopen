@@ -177,8 +177,8 @@ class ICapeThermoPropertyRoutine(
                 computed[prop] = self._compute_single_phase_property(
                     prop, state, phaseLabel
                 )
-            except Exception:  # pylint:disable=broad-exception-caught
-                pass
+            except Exception as exc:  # pylint:disable=broad-exception-caught
+                logging.exception("IN CalcSinglePhaseProp ---> Exception", exc_info=exc)
 
         for prop, value in computed.items():
             logging.debug(
@@ -363,6 +363,9 @@ class ICapeThermoPropertyRoutine(
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
         _kij_matrix = copy.copy(self._kij_matrix)
         assert pcsaft_parameters is not None
+        logging.debug(
+            "IN CalcSinglePhaseProp ---> requesting %r", (prop, state, phaseLabel)
+        )
 
         if prop == "activityCoefficient":
             return np.exp(

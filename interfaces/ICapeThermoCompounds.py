@@ -62,7 +62,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
         co_compIds = copy.copy(list(compIds.value))
 
         requested_props = [str(p) for p in self._as_list(co_props)]
-        logging.debug("REQUESTED PROPS = %r", requested_props)
+        logging.debug("IN GetCompoundConstant ---> requesting %r", (props, compIds))
         indices = self._compound_indices(co_compIds)
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
         assert pcsaft_parameters is not None
@@ -110,7 +110,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                         interfaceName="ICapeThermoCompounds",
                         operation="GetCompoundConstant",
                     )
-                logging.debug("CompoundConstant: %r", _propvals)
+                logging.debug("IN GetCompoundConstant ---> %r = %r", key, _propvals)
         return _propvals
 
     def GetCompoundList(self, compIds, formulae, names, boilTemps, molwts, casnos):
@@ -252,7 +252,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                         _propvals.append(h_lv / temperature)
                     else:
                         _propvals.append(h_lv)
-                logging.debug("TDependetProperty: %r", _propvals)
+                logging.debug("IN TDependetProperty ---> %r = %r", key, _propvals)
         return self.r8_array_variant(_propvals)
 
     def GetTDependentPropList(self):
