@@ -226,7 +226,7 @@ class ICapeThermoEquilibriumRoutine(
         """
         spec1 = self._as_list(specification1.value)
         spec2 = self._as_list(specification2.value)
-        soltype = str(solutionType)
+        soltype = str(solutionType).lower()
         if not spec1 or not spec2:
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeInvalidArgument,
@@ -246,8 +246,8 @@ class ICapeThermoEquilibriumRoutine(
                 # {"pressure", "entropy"}, # needs ideal gas model
             )
         ) and soltype in (
-            "Unspecified",
-            "Normal",
+            "unspecified",
+            "normal",
         )
 
     def _compute_bp_or_dp(self, prop, pcsaft_parameters, state, kij_matrix):
