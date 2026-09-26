@@ -388,7 +388,7 @@ class ICapeThermoPropertyRoutine(
             return [
                 sum(
                     frac * params[8]
-                    for frac, params in zip(state[1:], pcsaft_parameters)
+                    for frac, params in zip(state[2:], pcsaft_parameters)
                 )
             ]
         if prop in ("dewPointPressure", "bubblePointPressure"):
