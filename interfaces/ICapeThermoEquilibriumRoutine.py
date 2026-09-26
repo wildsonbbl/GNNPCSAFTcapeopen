@@ -2,12 +2,16 @@
 
 import copy
 import logging
+from typing import List, Optional
 
+import si_units as si
 from comtypes.gen import CAPEOPEN110
-from gnnepcsaft.pcsaft.pcsaft_feos import (
+from gnnepcsaft.pcsaft.feos.equilibria import (
     is_stable_feos,
     mix_bp_at_fixed_pressure_feos,
     mix_dp_at_fixed_pressure_feos,
+    mix_ph_flash_feos,
+    mix_ps_flash_feos,
     mix_tp_flash_feos,
     mix_vp_feos,
 )
@@ -68,13 +72,14 @@ class ICapeThermoEquilibriumRoutine(
         assert self.material is not None
         material = self.material
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
-        _kij_matrix = copy.copy(self._kij_matrix)
+        kij_matrix = copy.copy(self._kij_matrix)
         assert pcsaft_parameters is not None
 
         if not self.CheckEquilibriumSpec(specification1, specification2, solutionType):
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeLimitedImpl,
-                description="Only a Temperature/Pressure (TP) flash specification is "
+                description="Only TP, Tphasefraction, Pphasefraction"
+                " flash specification is "
                 "implemented by this Property Package",
                 interfaceName="ICapeThermoEquilibriumRoutine",
                 operation="CalcEquilibrium",
@@ -86,6 +91,14 @@ class ICapeThermoEquilibriumRoutine(
         if 0.0 in fractions:
             return 0
         state = [temperature, pressure, *fractions]
+        if spec2[0].lower() == "enthalpy":
+            enthalpy = self._get_overall_scalar("enthalpy", "Mole")
+            state = [temperature, pressure, enthalpy, *fractions]
+        if spec2[0].lower() == "entropy":
+            entropy = self._get_overall_scalar("entropy", "Mole")
+            state = [temperature, pressure, entropy, *fractions]
+        state_for_stability = [temperature, pressure, *fractions]
+
         logging.debug("FROM MATERIAL ---> state = %s", state)
 
         material.SetPresentPhases(
@@ -100,7 +113,9 @@ class ICapeThermoEquilibriumRoutine(
 
         try:
             if is_stable_feos(
-                parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
+                parameters=pcsaft_parameters,
+                state=state_for_stability,
+                kij_matrix=kij_matrix,
             ):
                 logging.debug("STABLE PHASE")
                 # TODO: setup if STABLE PHASE is liquid or vapor based on TPfractions
@@ -117,7 +132,7 @@ class ICapeThermoEquilibriumRoutine(
                     spec1,
                     spec2,
                     pcsaft_parameters,
-                    _kij_matrix,
+                    kij_matrix,
                     temperature,
                     pressure,
                     state,
@@ -129,21 +144,31 @@ class ICapeThermoEquilibriumRoutine(
                 )
                 return 0
             logging.debug("UNSTABLE PHASE")
-            result = mix_tp_flash_feos(pcsaft_parameters, state, _kij_matrix)
+            flash = self._get_flash(
+                spec1_0=spec1[0].lower(),
+                spec2_0=spec2[0].lower(),
+                pcsaft_parameters=pcsaft_parameters,
+                kij_matrix=kij_matrix,
+                state=state,
+            )
+
         except Exception as exc:  # pylint:disable=broad-exception-caught
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeSolvingError,
-                description=f"TP flash failed to converge: {exc}",
+                description=f"Flash failed to converge: {exc}",
                 interfaceName="ICapeThermoEquilibriumRoutine",
                 operation="CalcEquilibrium",
             )
 
-        liquid_fractions = result.liquid.molefracs
-        vapor_fractions = result.vapor.molefracs
+        liquid_fractions = flash.liquid.molefracs
+        vapor_fractions = flash.vapor.molefracs
 
         vapor_beta, liquid_beta = self._get_vl_beta(
             fractions, liquid_fractions, vapor_fractions
         )
+
+        liquid_temperature = flash.liquid.temperature / si.KELVIN
+        liquid_pressure = flash.liquid.pressure() / si.PASCAL
 
         logging.debug(
             "IN CalcEquilibrium ---> [liquid_fractions, vapor_fractions] == %s",
@@ -158,9 +183,9 @@ class ICapeThermoEquilibriumRoutine(
             spec1,
             spec2,
             pcsaft_parameters,
-            _kij_matrix,
-            temperature,
-            pressure,
+            kij_matrix,
+            liquid_temperature,
+            liquid_pressure,
             state,
             liquid_fractions,
             vapor_fractions,
@@ -215,17 +240,19 @@ class ICapeThermoEquilibriumRoutine(
                 {"temperature", "pressure"},
                 {"temperature", "phasefraction"},
                 {"pressure", "phasefraction"},
+                # {"pressure", "enthalpy"}, # needs ideal gas model
+                # {"pressure", "entropy"}, # needs ideal gas model
             )
         ) and soltype in (
             "Unspecified",
             "Normal",
         )
 
-    def _compute_bp_or_dp(self, prop, pcsaft_parameters, state, _kij_matrix):
+    def _compute_bp_or_dp(self, prop, pcsaft_parameters, state, kij_matrix):
 
         if prop in ("dewPointPressure", "bubblePointPressure"):
             bp, dp = mix_vp_feos(
-                parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
+                parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
             )
             if prop == "bubblePointPressure":
                 return [bp]
@@ -236,7 +263,7 @@ class ICapeThermoEquilibriumRoutine(
                     mix_dp_at_fixed_pressure_feos(
                         parameters=pcsaft_parameters,
                         state=state,
-                        kij_matrix=_kij_matrix,
+                        kij_matrix=kij_matrix,
                     )
                 ]
             except Exception:  # pylint:disable=broad-exception-caught
@@ -247,39 +274,41 @@ class ICapeThermoEquilibriumRoutine(
                     mix_bp_at_fixed_pressure_feos(
                         parameters=pcsaft_parameters,
                         state=state,
-                        kij_matrix=_kij_matrix,
+                        kij_matrix=kij_matrix,
                     )
                 ]
             except Exception:  # pylint:disable=broad-exception-caught
                 return [float("nan")]
-        return []
+        return [float("nan")]
 
     def _not_setted_bp_or_dp(
-        self, spec1, spec2, pcsaft_parameters, _kij_matrix, state, material
+        self,
+        spec1: List[str],
+        spec2: List[str],
+        pcsaft_parameters: List[List[float]],
+        kij_matrix: List[List[float]],
+        state: List[float],
+        material: CAPEOPEN110.ICapeThermoMaterial,
     ):
         if (
-            spec1[0] == "Temperature"
-            and spec2[0] == "phaseFraction"
-            and spec2[2] == "Vapor"
-        ) or (
-            spec1[0] == "Pressure"
-            and spec2[0] == "phaseFraction"
-            and spec2[2] == "Vapor"
+            spec1[0].lower() in ("temperature", "pressure")
+            and spec2[0].lower() == "phasefraction"
+            and spec2[2].lower() == "vapor"
         ):
-            phaseFraction = material.GetSinglePhaseProp(  # type: ignore
-                "phaseFraction", "Vapor", "Mole"
+            phaseFraction = material.GetSinglePhaseProp(
+                "phaseFraction", "Vapor", "Mole", None
             )[0]
 
             logging.debug("IN CalcEquilibrium ---> phaseFraction = %r", phaseFraction)
 
-            if spec1[0] == "Temperature" and spec2[0] == "phaseFraction":
+            if spec1[0].lower() == "temperature":
                 if phaseFraction == 1.0:
                     prop = "dewPointPressure"
                     value = self._compute_bp_or_dp(
                         prop=prop,
                         pcsaft_parameters=pcsaft_parameters,
                         state=state,
-                        _kij_matrix=_kij_matrix,
+                        kij_matrix=kij_matrix,
                     )
 
                     logging.debug("IN CalcEquilibrium --->%r = %r", prop, value)
@@ -294,7 +323,7 @@ class ICapeThermoEquilibriumRoutine(
                         prop=prop,
                         pcsaft_parameters=pcsaft_parameters,
                         state=state,
-                        _kij_matrix=_kij_matrix,
+                        kij_matrix=kij_matrix,
                     )
 
                     logging.debug("IN CalcEquilibrium --->%r = %r", prop, value)
@@ -302,14 +331,14 @@ class ICapeThermoEquilibriumRoutine(
                     material.SetSinglePhaseProp(
                         "Pressure", "Liquid", None, self.r8_array_variant(value)
                     )
-            if spec1[0] == "Pressure" and spec2[0] == "phaseFraction":
+            if spec1[0].lower() == "pressure":
                 if phaseFraction == 1.0:
                     prop = "dewPointTemperature"
                     value = self._compute_bp_or_dp(
                         prop=prop,
                         pcsaft_parameters=pcsaft_parameters,
                         state=state,
-                        _kij_matrix=_kij_matrix,
+                        kij_matrix=kij_matrix,
                     )
 
                     logging.debug("IN CalcEquilibrium --->%r = %r", prop, value)
@@ -324,7 +353,7 @@ class ICapeThermoEquilibriumRoutine(
                         prop=prop,
                         pcsaft_parameters=pcsaft_parameters,
                         state=state,
-                        _kij_matrix=_kij_matrix,
+                        kij_matrix=kij_matrix,
                     )
                     logging.debug("IN CalcEquilibrium --->%r = %r", prop, value)
                     material.SetSinglePhaseProp(
@@ -333,12 +362,47 @@ class ICapeThermoEquilibriumRoutine(
             return False
         return True
 
+    def _get_flash(
+        self,
+        spec1_0: str,
+        spec2_0: str,
+        pcsaft_parameters: List[List[float]],
+        kij_matrix: Optional[List[List[float]]],
+        state: List[float],
+    ):
+        if spec1_0 in (
+            "temperature",
+            "pressure",
+        ) and spec2_0 in (
+            "pressure",
+            "phasefraction",
+        ):
+            return mix_tp_flash_feos(
+                parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+            )
+        if spec1_0 == "pressure" and spec2_0 == "enthalpy":
+            return mix_ph_flash_feos(
+                parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+            )
+        if spec1_0 == "pressure" and spec2_0 == "entropy":
+            return mix_ps_flash_feos(
+                parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+            )
+        return self.raise_cape_error(
+            error_cls=ecape_errors.ECapeLimitedImpl,
+            description="Only TP, PH, PS, Tphasefraction, Pphasefraction"
+            " flash specification is "
+            "implemented by this Property Package",
+            interfaceName="ICapeThermoEquilibriumRoutine",
+            operation="CalcEquilibrium",
+        )
+
     def _set_equilibrium(
         self,
         spec1,
         spec2,
         pcsaft_parameters,
-        _kij_matrix,
+        kij_matrix,
         temperature,
         pressure,
         state,
@@ -352,7 +416,7 @@ class ICapeThermoEquilibriumRoutine(
             spec1,
             spec2,
             pcsaft_parameters,
-            _kij_matrix,
+            kij_matrix,
             state,
             material,
         ):
