@@ -13,7 +13,7 @@ from gnnepcsaft.pcsaft.feos import (
 )
 
 from . import ecape_errors
-from .utils_common import GNNPCSAFTPPbase
+from .utils_common import GNNPCSAFTPPbase, OutboundVARIANT
 
 _CONST_PROPS = [
     "molecularWeight",
@@ -111,7 +111,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                         operation="GetCompoundConstant",
                     )
                 logging.debug("IN GetCompoundConstant ---> %r = %r", key, _propvals)
-        return _propvals
+        return OutboundVARIANT(_propvals)
 
     def GetCompoundList(self, compIds, formulae, names, boilTemps, molwts, casnos):
         """

@@ -8,7 +8,7 @@ from typing import List, Optional
 import numpy as np
 import psutil
 from comtypes import BSTR, COMError
-from comtypes.automation import VARIANT
+from comtypes.automation import VARIANT, _VariantClear
 from comtypes.gen import CAPEOPEN110
 from comtypes.safearray import _midlSAFEARRAY
 
@@ -18,6 +18,20 @@ from .ecape_user import ECapeUser
 _SMILES_CHAR_RE = re.compile(r"^[A-Za-z0-9@+\-\[\]\(\)=#\\/%.:*$]+$")
 
 proc = psutil.Process()
+
+
+class OutboundVARIANT(VARIANT):
+    """
+    Comtypes orignial VARIANT tries to call oleaut32.VariantClear on all
+    VARIANTs, including the ones received by the Property Package. This
+    results in a silent crash for trying to clear a memory twice. To solve
+    this, _VariantClear needs to be disabled on the comtypes side and
+    reactivated here so that it's used only on python-created VARIANTs.
+    """
+
+    def __del__(self):
+        if self._b_needsfree_:  # pylint: disable = using-constant-test
+            _VariantClear(self)
 
 
 class GNNPCSAFTPPbase(ECapeUser):
@@ -37,24 +51,24 @@ class GNNPCSAFTPPbase(ECapeUser):
     def bstr_array_variant(self, values: List[str]):
         "make array with type VT_ARRAY | VT_BSTR"
         sa = _midlSAFEARRAY(BSTR).from_param(list(values))
-        bstr_array = VARIANT(sa)
+        bstr_array = OutboundVARIANT(sa)
         return bstr_array
 
     def r8_array_variant(self, values: List[float]):
         "make array with type VT_ARRAY | VT_R8"
         sa = array.array("d", list(values))
-        r8_array = VARIANT(sa)
+        r8_array = OutboundVARIANT(sa)
         return r8_array
 
     def i4_array_variant(self, values: List[int]):
         "make array with type VT_ARRAY | VT_I4"
         sa = array.array("l", list(values))
-        i4_array = VARIANT(sa)
+        i4_array = OutboundVARIANT(sa)
         return i4_array
 
     def empty_array_variant(self):
         "make empty array"
-        empty_array = VARIANT()
+        empty_array = OutboundVARIANT()
         return empty_array
 
     def _require_components(self, interfaceName, operation):
