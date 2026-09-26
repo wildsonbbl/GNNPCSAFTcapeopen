@@ -282,8 +282,8 @@ class GNNPCSAFTPPbase(ECapeUser):
             internal[internal_pos] = material_values[material_pos]
         return internal
 
-    def _get_overall_scalar(self, prop):
-        values = self.material.GetOverallProp(prop, None)  # type: ignore
+    def _get_overall_scalar(self, prop, basis=None):
+        values = self.material.GetOverallProp(prop, basis)  # type: ignore
         values = self._as_list(values)
         return float(values[0])
 
