@@ -245,7 +245,9 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                     "heatCapacityOfLiquid",
                     "heatOfVaporization",
                 ):
-                    h_lv = pure_h_lv_feos(pcsaft_parameters[0], [temperature]) * 1000.0
+                    h_lv = (
+                        pure_h_lv_feos(pcsaft_parameters[idx], [temperature]) * 1000.0
+                    )
                     if key == "heatCapacityOfLiquid":
                         _propvals.append(h_lv / temperature)
                     else:
