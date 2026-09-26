@@ -120,11 +120,16 @@ class ICapeThermoEquilibriumRoutine(
                 kij_matrix=kij_matrix,
             ):
                 logging.debug("STABLE PHASE")
-                # TODO: setup if STABLE PHASE is liquid or vapor based on TPfractions
-                # Fixing at Liquid for now
-                liquid_fractions = fractions
-                vapor_fractions = [0.0] * len(fractions)
-                # TODO: setup if STABLE PHASE is liquid or vapor based on TPfractions
+
+                bp, _dp = mix_vp_feos(
+                    parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+                )
+                if pressure > bp:
+                    liquid_fractions = fractions
+                    vapor_fractions = [0.0] * len(fractions)
+                else:
+                    liquid_fractions = [0.0] * len(fractions)
+                    vapor_fractions = fractions
 
                 vapor_beta, liquid_beta = self._get_vl_beta(
                     fractions, liquid_fractions, vapor_fractions
