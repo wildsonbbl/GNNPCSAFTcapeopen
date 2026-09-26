@@ -29,7 +29,7 @@ _SINGLE_PHASE_PROPS = (
     "molecularWeight",
 )
 _SINGLE_PHASE_PROPS_MOLE = ("density",)
-_TWO_PHASE_PROPS = ("kvalue", "logKvalue")
+_TWO_PHASE_PROPS = ("kvalue", "logkvalue")
 _PHASE_LABELS = ("Liquid", "Vapor")
 
 # eCapeCalculationCode flags used by CalcAndGetLnPhi's fFlags argument
@@ -276,7 +276,7 @@ class ICapeThermoPropertyRoutine(
 
         computed = {}
         for prop in requested:
-            if prop == "logKvalue":
+            if prop.lower() == "logkvalue":
                 computed[prop] = log_kvalue.tolist()
             elif prop == "kvalue":
                 computed[prop] = np.exp(log_kvalue).tolist()
@@ -285,7 +285,7 @@ class ICapeThermoPropertyRoutine(
             material.SetTwoPhaseProp(
                 prop,
                 self.bstr_array_variant(labels),
-                "Mole",
+                None,
                 self.r8_array_variant(value),
             )
         rss_mb = self.rss_mb()
