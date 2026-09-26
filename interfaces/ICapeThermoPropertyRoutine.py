@@ -6,6 +6,11 @@ from typing import List
 
 import numpy as np
 from comtypes.gen import CAPEOPEN110
+from gnnepcsaft.pcsaft.feos.mixture import (
+    mix_den_feos,
+    mix_r_enthalpy_feos,
+    mix_r_entropy_feos,
+)
 from gnnepcsaft.pcsaft.pcsaft_feos import (
     mix_bp_at_fixed_pressure_feos,
     mix_dp_at_fixed_pressure_feos,
@@ -15,7 +20,6 @@ from gnnepcsaft.pcsaft.pcsaft_feos import (
 )
 
 from . import ecape_errors
-from .pc_saft_feos import mix_den_feos
 from .utils_common import GNNPCSAFTPPbase
 
 _SINGLE_PHASE_PROPS = (
@@ -413,6 +417,24 @@ class ICapeThermoPropertyRoutine(
                 ]
             except Exception:  # pylint:disable=broad-exception-caught
                 return [float("nan")]
+        if prop == "enthalpy":
+            return [
+                mix_r_enthalpy_feos(
+                    parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=_kij_matrix,
+                    density_initialization=phaseLabel,
+                )
+            ]
+        if prop == "entropy":
+            return [
+                mix_r_entropy_feos(
+                    parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=_kij_matrix,
+                    density_initialization=phaseLabel,
+                )
+            ]
 
         return [float("nan")]
 
