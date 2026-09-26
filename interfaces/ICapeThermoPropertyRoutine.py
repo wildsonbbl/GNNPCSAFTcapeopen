@@ -27,6 +27,10 @@ _SINGLE_PHASE_PROPS = (
     "density",
     "logFugacityCoefficient",
     "molecularWeight",
+    "bubblePointPressure",
+    "dewPointPressure",
+    "bubblePointTemperature",
+    "dewPointTemperature",
 )
 _SINGLE_PHASE_PROPS_MOLE = ("density",)
 _TWO_PHASE_PROPS = ("kvalue", "logkvalue")
@@ -392,6 +396,8 @@ class ICapeThermoPropertyRoutine(
                 )
             ]
         if prop in ("dewPointPressure", "bubblePointPressure"):
+            if 1.0 in state:
+                return [float("nan")]
             bp, dp = mix_vp_feos(
                 parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
             )
@@ -399,6 +405,8 @@ class ICapeThermoPropertyRoutine(
                 return [bp]
             return [dp]
         if prop == "dewPointTemperature":
+            if 1.0 in state:
+                return [float("nan")]
             try:
                 return [
                     mix_dp_at_fixed_pressure_feos(
@@ -410,6 +418,8 @@ class ICapeThermoPropertyRoutine(
             except Exception:  # pylint:disable=broad-exception-caught
                 return [float("nan")]
         if prop == "bubblePointTemperature":
+            if 1.0 in state:
+                return [float("nan")]
             try:
                 return [
                     mix_bp_at_fixed_pressure_feos(
