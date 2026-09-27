@@ -31,8 +31,14 @@ _SINGLE_PHASE_PROPS = (
     "dewPointPressure",
     "bubblePointTemperature",
     "dewPointTemperature",
+    "enthalpy",
+    "entropy",
 )
-_SINGLE_PHASE_PROPS_MOLE = ("density",)
+_SINGLE_PHASE_PROPS_MOLE = (
+    "density",
+    "enthalpy",
+    "entropy",
+)
 _TWO_PHASE_PROPS = ("kvalue", "logkvalue")
 _PHASE_LABELS = ("Liquid", "Vapor")
 
