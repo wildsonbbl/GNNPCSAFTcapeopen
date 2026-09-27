@@ -113,6 +113,13 @@ class ICapeThermoPropertyRoutine(
                 interfaceName="ICapeThermoPropertyRoutine",
                 operation="CalcAndGetLnPhi",
             )
+        if 0.0 == sum(fractions):
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeFailedInitialisation,
+                description=f"Phase fractions wrongly set to {fractions}",
+                interfaceName="ICapeThermoPropertyRoutine",
+                operation="CalcAndGetLnPhi",
+            )
         state = [float(temperature), float(pressure), *fractions]
         ln_phi = mix_ln_fugacity_coefficient(pcsaft_parameters, state, _kij_matrix)
         return (
@@ -171,6 +178,14 @@ class ICapeThermoPropertyRoutine(
             )
 
         temperature, pressure, fractions = self._get_tp_fraction(phaseLabel)
+        if 0.0 == sum(fractions):
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeFailedInitialisation,
+                description=f"Phase fractions wrongly set to {fractions}"
+                f" for {(props, phaseLabel)}",
+                interfaceName="ICapeThermoPropertyRoutine",
+                operation="CalcSinglePhaseProp",
+            )
         state = [temperature, pressure, *fractions]
 
         # Compute everything before writing anything back (a partial failure
@@ -266,6 +281,14 @@ class ICapeThermoPropertyRoutine(
                 error_cls=ecape_errors.ECapeFailedInitialisation,
                 description="CalcTwoPhaseProp requires both phases to share the same "
                 "temperature and pressure",
+                interfaceName="ICapeThermoPropertyRoutine",
+                operation="CalcTwoPhaseProp",
+            )
+        if 0.0 == sum(x1) or 0.0 == sum(x2):
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeFailedInitialisation,
+                description=f"Phase fractions wrongly set to {[x1,x2]}"
+                f" for {(props, phaseLabels)}",
                 interfaceName="ICapeThermoPropertyRoutine",
                 operation="CalcTwoPhaseProp",
             )
@@ -436,7 +459,7 @@ class ICapeThermoPropertyRoutine(
                     parameters=pcsaft_parameters,
                     state=state,
                     kij_matrix=_kij_matrix,
-                    density_initialization=phaseLabel,
+                    density_initialization=phaseLabel.lower(),
                 )
             ]
         if prop == "entropy":
@@ -445,7 +468,7 @@ class ICapeThermoPropertyRoutine(
                     parameters=pcsaft_parameters,
                     state=state,
                     kij_matrix=_kij_matrix,
-                    density_initialization=phaseLabel,
+                    density_initialization=phaseLabel.lower(),
                 )
             ]
 

@@ -91,7 +91,12 @@ class ICapeThermoEquilibriumRoutine(
         pressure = self._get_overall_scalar("pressure")
         fractions = self._get_overall_fractions()
         if 0.0 in fractions:
-            return 0
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeFailedInitialisation,
+                description=f"Overall fractions wrongly set to {fractions}",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CalcEquilibrium",
+            )
         state = [temperature, pressure, *fractions]
         if spec2[0].lower() == "enthalpy":
             enthalpy = self._get_overall_scalar("enthalpy", "Mole")
