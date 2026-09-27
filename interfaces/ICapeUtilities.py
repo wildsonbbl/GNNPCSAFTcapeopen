@@ -112,7 +112,7 @@ class ICapeUtilities(GNNPCSAFTPPbase, CAPEOPEN110.ICapeUtilities):
         self._pmc_state = PMCState.INITIALIZING
 
         try:
-            smiles_list = self._prompt_for_smiles_list()
+            smiles_list, kij_values = self._prompt_for_smiles_list()
         except Exception as exc:  # pylint: disable=broad-exception-caught
             self._pmc_state = PMCState.NON_INITIALIZED
             self.raise_cape_error(
@@ -122,7 +122,7 @@ class ICapeUtilities(GNNPCSAFTPPbase, CAPEOPEN110.ICapeUtilities):
                 operation="Initialize",
             )
 
-        if smiles_list is None:
+        if smiles_list is None or kij_values is None:
             # User cancelled: this counts as a failed initialization.
             self._pmc_state = PMCState.NON_INITIALIZED
             self.raise_cape_error(
@@ -132,10 +132,7 @@ class ICapeUtilities(GNNPCSAFTPPbase, CAPEOPEN110.ICapeUtilities):
                 operation="Initialize",
             )
 
-        self.components_smiles = smiles_list
-        self.pcsaft_parameters = [
-            predict_pcsaft_parameters(smiles) for smiles in self.components_smiles
-        ]
+        self._config_gnnpcsaft(smiles_list, kij_values)
         self._pmc_state = PMCState.EXECUTING
         return 0
 
@@ -198,7 +195,7 @@ class ICapeUtilities(GNNPCSAFTPPbase, CAPEOPEN110.ICapeUtilities):
             )
 
         try:
-            new_smiles = self._prompt_for_smiles_list()
+            new_smiles, new_kij_values = self._prompt_for_smiles_list()
         except Exception as exc:  # pylint: disable=broad-exception-caught
             self.raise_cape_error(
                 ECapeUnknown,
@@ -206,11 +203,25 @@ class ICapeUtilities(GNNPCSAFTPPbase, CAPEOPEN110.ICapeUtilities):
                 interfaceName="ICapeUtilities",
                 operation="Edit",
             )
-            return
 
-        if new_smiles is not None:
-            self.components_smiles = new_smiles
+        if new_smiles is not None and new_kij_values is not None:
             # NOTE: per UC-004, the PME is responsible for detecting that
             # PMC state (component list) changed after Edit() returns and
             # re-integrating it (e.g. re-checking ports/connections).
+            self._config_gnnpcsaft(new_smiles, new_kij_values)
         return 0
+
+    def _config_gnnpcsaft(self, smiles_list, kij_values):
+        self.components_smiles = smiles_list
+        self.pcsaft_parameters = [
+            predict_pcsaft_parameters(smiles) for smiles in self.components_smiles
+        ]
+        n = len(smiles_list)
+        kij_matrix = [[0.0] * n for _ in range(n)]
+        k_idx = 0
+        for i in range(n):
+            for j in range(i + 1, n):
+                kij_matrix[i][j] = kij_values[k_idx]
+                kij_matrix[j][i] = kij_values[k_idx]
+                k_idx += 1
+        self._kij_matrix = kij_matrix

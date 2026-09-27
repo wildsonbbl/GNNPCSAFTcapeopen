@@ -3,7 +3,7 @@
 import array
 import re
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 import psutil
@@ -11,6 +11,7 @@ from comtypes import BSTR, COMError
 from comtypes.automation import VARIANT, _VariantClear
 from comtypes.gen import CAPEOPEN110
 from comtypes.safearray import _midlSAFEARRAY
+from gnnepcsaft.data.rdkit_util import smilestoinchi
 
 from . import ecape_errors
 from .ecape_user import ECapeUser
@@ -117,16 +118,18 @@ class GNNPCSAFTPPbase(ECapeUser):
             raise ValueError("empty SMILES string")
         if not _SMILES_CHAR_RE.match(s):
             raise ValueError(f"'{s}' contains characters not valid in SMILES")
+        smilestoinchi(smiles=smiles)
         return s
 
-    def _prompt_for_smiles_list(self) -> Optional[List[str]]:
+    def _prompt_for_smiles_list(
+        self,
+    ) -> Tuple[Optional[List[str]], Optional[List[float]]]:
         """
-        Blocking, modal dialog asking the user for one SMILES string per line.
-        Returns a list[str] of cleaned SMILES, or None if the user cancelled.
+        Blocking, modal dialog asking the user for one SMILES strings in the
+        first line and kij values in the second line.
 
-        Implemented with Tkinter (stdlib, no extra dependency). Swap this out
-        for a Qt/wx dialog if your PME's host process already has one of those
-        GUI toolkits running an event loop.
+        Returns a list[str] of cleaned SMILES and list[float] of kij,
+        or None if the user cancelled.
         """
         import tkinter as tk  # pylint: disable=import-outside-toplevel
         from tkinter import (  # pylint: disable=import-outside-toplevel
@@ -136,6 +139,7 @@ class GNNPCSAFTPPbase(ECapeUser):
 
         result = {}
         result["smiles"] = None
+        result["kij_values"] = None
 
         root = tk.Tk()
         root.title("Property Package — Component Definition")
@@ -143,8 +147,10 @@ class GNNPCSAFTPPbase(ECapeUser):
 
         tk.Label(
             root,
-            text="Enter one SMILES string per line for each component\n"
-            "this Property Package instance should handle:",
+            text="The first line is for SMILES strings separated by empty space"
+            " in sequence (SMILES_1 SMILES_2 ...).\n"
+            "The second line is for kij values separated by empty space"
+            " in sequence (k12 k13 k14 k23 k24 ...).",
             justify="left",
             padx=10,
             pady=10,
@@ -161,14 +167,15 @@ class GNNPCSAFTPPbase(ECapeUser):
             raw_lines = text_box.get("1.0", "end").splitlines()
             cleaned = []
             errors = []
-            for i, line in enumerate(raw_lines, start=1):
-                line = line.strip()
-                if not line:
+            smiles_strings = raw_lines[0].split(" ")
+            for i, smiles in enumerate(smiles_strings, start=1):
+                smiles = smiles.strip()
+                if not smiles:
                     continue
                 try:
-                    cleaned.append(self._validate_smiles_syntax(line))
+                    cleaned.append(self._validate_smiles_syntax(smiles))
                 except ValueError as exc:
-                    errors.append(f"Line {i}: {exc}")
+                    errors.append(f"Split {i}: {exc}")
 
             if errors:
                 messagebox.showerror(
@@ -186,10 +193,53 @@ class GNNPCSAFTPPbase(ECapeUser):
                 return
 
             result["smiles"] = cleaned
+
+            cleaned = []
+            errors = []
+            try:
+                kij_values = raw_lines[1].split(" ")
+            except IndexError:
+                messagebox.showerror(
+                    "Invalid kij value",
+                    "Enter kij values in the second line",
+                )
+                return
+
+            for i, kij in enumerate(kij_values, start=1):
+                kij = kij.strip()
+                if not kij:
+                    continue
+                try:
+                    cleaned.append(float(kij))
+                except ValueError as exc:
+                    errors.append(f"Split {i}: {exc}")
+
+            if errors:
+                messagebox.showerror(
+                    "Invalid kij value",
+                    "Please fix the following before continuing:\n\n"
+                    + "\n".join(errors),
+                )
+                return
+
+            result["kij_values"] = cleaned
+            size = len(result["smiles"])
+            expected = (size * (size - 1)) // 2
+            if len(result["kij_values"]) != expected:
+                messagebox.showerror(
+                    "Invalid number of kij values",
+                    f"kij values should match the number of SMILES strings"
+                    f" to make the {size}x{size} kij matrix.\n\n"
+                    f"Expected {expected} kij values (k12 k13 ...),"
+                    f" got {len(result["kij_values"])}",
+                )
+                return
+
             root.destroy()
 
         def on_cancel():
             result["smiles"] = None
+            result["kij_values"] = None
             root.destroy()
 
         tk.Button(button_frame, text="OK", width=12, command=on_ok).pack(
@@ -202,7 +252,7 @@ class GNNPCSAFTPPbase(ECapeUser):
         root.protocol("WM_DELETE_WINDOW", on_cancel)
         root.mainloop()
 
-        return result["smiles"]
+        return result["smiles"], result["kij_values"]
 
         # ---------------------------------------------------------------------------
         # CAPE-OPEN error handling
