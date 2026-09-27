@@ -12,6 +12,7 @@ from comtypes.automation import VARIANT, _VariantClear
 from comtypes.gen import CAPEOPEN110
 from comtypes.safearray import _midlSAFEARRAY
 from gnnepcsaft.data.rdkit_util import smilestoinchi
+from gnnepcsaft_mcp_server.utils import predict_pcsaft_parameters
 
 from . import ecape_errors
 from .ecape_user import ECapeUser
@@ -55,7 +56,7 @@ class GNNPCSAFTPPbase(ECapeUser):
     "ICapeIdentification Class with methods implemented"
 
     material: Optional[CAPEOPEN110.ICapeThermoMaterial] = None
-    components_smiles: List[str]
+    components_smiles: Optional[List[str]] = None
     pcsaft_parameters: Optional[List[List[float]]] = None
     _kij_matrix: Optional[List[List[float]]] = None
     _pmc_state: str = PMCState.NON_INITIALIZED
@@ -330,6 +331,7 @@ class GNNPCSAFTPPbase(ECapeUser):
         """Map the Material Object's compound order onto our own, so calls
         that pull composition data from the Material line up with the order
         self.pcsaft_parameters/self._kij_matrix were built in."""
+        assert self.components_smiles is not None
 
         material_ids = list(self.components_smiles)
         if len(material_ids) != len(self.components_smiles):
@@ -379,3 +381,19 @@ class GNNPCSAFTPPbase(ECapeUser):
             if value is not None:
                 return float(value)
         return None
+
+    def _config_gnnpcsaft(self, smiles_list, kij_values):
+        self.components_smiles = smiles_list
+        assert self.components_smiles is not None
+        self.pcsaft_parameters = [
+            predict_pcsaft_parameters(smiles) for smiles in self.components_smiles
+        ]
+        n = len(smiles_list)
+        kij_matrix = [[0.0] * n for _ in range(n)]
+        k_idx = 0
+        for i in range(n):
+            for j in range(i + 1, n):
+                kij_matrix[i][j] = kij_values[k_idx]
+                kij_matrix[j][i] = kij_values[k_idx]
+                k_idx += 1
+        self._kij_matrix = kij_matrix

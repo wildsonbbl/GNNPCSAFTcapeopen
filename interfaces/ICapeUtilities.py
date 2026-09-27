@@ -204,18 +204,3 @@ class ICapeUtilities(GNNPCSAFTPPbase, CAPEOPEN110.ICapeUtilities):
             # re-integrating it (e.g. re-checking ports/connections).
             self._config_gnnpcsaft(new_smiles, new_kij_values)
         return 0
-
-    def _config_gnnpcsaft(self, smiles_list, kij_values):
-        self.components_smiles = smiles_list
-        self.pcsaft_parameters = [
-            predict_pcsaft_parameters(smiles) for smiles in self.components_smiles
-        ]
-        n = len(smiles_list)
-        kij_matrix = [[0.0] * n for _ in range(n)]
-        k_idx = 0
-        for i in range(n):
-            for j in range(i + 1, n):
-                kij_matrix[i][j] = kij_values[k_idx]
-                kij_matrix[j][i] = kij_values[k_idx]
-                k_idx += 1
-        self._kij_matrix = kij_matrix
