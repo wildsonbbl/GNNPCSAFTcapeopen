@@ -185,13 +185,7 @@ class ICapeThermoPropertyRoutine(
 
         temperature, pressure, fractions = self._get_tp_fraction(phaseLabel)
         if 0.0 == sum(fractions):
-            self.raise_cape_error(
-                error_cls=ecape_errors.ECapeFailedInitialisation,
-                description=f"Phase fractions wrongly set to {fractions}"
-                f" for {(props, phaseLabel)}",
-                interfaceName="ICapeThermoPropertyRoutine",
-                operation="CalcSinglePhaseProp",
-            )
+            return 0
         state = [temperature, pressure, *fractions]
 
         # Compute everything before writing anything back (a partial failure
@@ -291,13 +285,7 @@ class ICapeThermoPropertyRoutine(
                 operation="CalcTwoPhaseProp",
             )
         if 0.0 == sum(x1) or 0.0 == sum(x2):
-            self.raise_cape_error(
-                error_cls=ecape_errors.ECapeFailedInitialisation,
-                description=f"Phase fractions wrongly set to {[x1,x2]}"
-                f" for {(props, phaseLabels)}",
-                interfaceName="ICapeThermoPropertyRoutine",
-                operation="CalcTwoPhaseProp",
-            )
+            return 0
 
         ln_phi_1 = mix_ln_fugacity_coefficient(
             pcsaft_parameters, [t1, p1, *x1], _kij_matrix
