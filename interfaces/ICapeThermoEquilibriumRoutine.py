@@ -140,7 +140,7 @@ class ICapeThermoEquilibriumRoutine(
                     fractions, liquid_fractions, vapor_fractions
                 )
 
-                self._set_equilibrium(
+                self._set_equilibrium_for_stable_phase(
                     spec1,
                     spec2,
                     pcsaft_parameters,
@@ -172,38 +172,15 @@ class ICapeThermoEquilibriumRoutine(
                 operation="CalcEquilibrium",
             )
 
-        liquid_fractions = flash.liquid.molefracs
-        vapor_fractions = flash.vapor.molefracs
-
-        vapor_beta, liquid_beta = self._get_vl_beta(
-            fractions, liquid_fractions, vapor_fractions
-        )
-
-        liquid_temperature = flash.liquid.temperature / si.KELVIN
-        liquid_pressure = flash.liquid.pressure() / si.PASCAL
-
-        logging.debug(
-            "IN CalcEquilibrium ---> [liquid_fractions, vapor_fractions] == %s",
-            [liquid_fractions, vapor_fractions],
-        )
-        logging.debug(
-            "IN CalcEquilibrium ---> [liquid_beta, vapor_beta] == %s",
-            [liquid_beta, vapor_beta],
-        )
-
-        self._set_equilibrium(
-            spec1,
-            spec2,
-            pcsaft_parameters,
-            kij_matrix,
-            liquid_temperature,
-            liquid_pressure,
-            state,
-            liquid_fractions,
-            vapor_fractions,
-            vapor_beta,
-            liquid_beta,
-            material,
+        self._set_equilibrium_from_flash(
+            spec1=spec1,
+            spec2=spec2,
+            pcsaft_parameters=pcsaft_parameters,
+            kij_matrix=kij_matrix,
+            state=state,
+            material=material,
+            flash=flash,
+            overall_fractions=fractions,
         )
 
         return 0
@@ -409,7 +386,7 @@ class ICapeThermoEquilibriumRoutine(
             operation="CalcEquilibrium",
         )
 
-    def _set_equilibrium(
+    def _set_equilibrium_for_stable_phase(
         self,
         spec1,
         spec2,
@@ -469,20 +446,108 @@ class ICapeThermoEquilibriumRoutine(
             "Mole",
             self.r8_array_variant(liquid_fractions),
         )
-        if vapor_beta is not None:
+        material.SetSinglePhaseProp(
+            "phaseFraction",
+            "Vapor",
+            "Mole",
+            self.r8_array_variant([vapor_beta]),
+        )
+        material.SetSinglePhaseProp(
+            "phaseFraction",
+            "Liquid",
+            "Mole",
+            self.r8_array_variant([liquid_beta]),
+        )
+
+        rss_mb = self.rss_mb()
+        logging.debug("PROCESS MEMORY: %r MB", rss_mb)
+
+    def _set_equilibrium_from_flash(
+        self,
+        spec1,
+        spec2,
+        pcsaft_parameters,
+        kij_matrix,
+        state,
+        material,
+        flash,
+        overall_fractions,
+    ):
+
+        liquid_fractions = flash.liquid.molefracs
+        vapor_fractions = flash.vapor.molefracs
+
+        vapor_beta, liquid_beta = self._get_vl_beta(
+            overall_fractions, liquid_fractions, vapor_fractions
+        )
+
+        liquid_temperature = flash.liquid.temperature / si.KELVIN
+        liquid_pressure = flash.liquid.pressure() / si.PASCAL
+
+        vapor_temperature = flash.vapor.temperature / si.KELVIN
+        vapor_pressure = flash.vapor.pressure() / si.PASCAL
+
+        logging.debug(
+            "IN CalcEquilibrium ---> [liquid_fractions, vapor_fractions] == %s",
+            [liquid_fractions, vapor_fractions],
+        )
+        logging.debug(
+            "IN CalcEquilibrium ---> [liquid_beta, vapor_beta] == %s",
+            [liquid_beta, vapor_beta],
+        )
+
+        if self._not_setted_bp_or_dp(
+            spec1, spec2, pcsaft_parameters, kij_matrix, state, material
+        ):
+
             material.SetSinglePhaseProp(
-                "phaseFraction",
+                "temperature",
                 "Vapor",
-                "Mole",
-                self.r8_array_variant([vapor_beta]),
+                None,
+                self.r8_array_variant([vapor_temperature]),
             )
-        if liquid_beta is not None:
             material.SetSinglePhaseProp(
-                "phaseFraction",
+                "temperature",
                 "Liquid",
-                "Mole",
-                self.r8_array_variant([liquid_beta]),
+                None,
+                self.r8_array_variant([liquid_temperature]),
             )
+            material.SetSinglePhaseProp(
+                "pressure",
+                "Vapor",
+                None,
+                self.r8_array_variant([vapor_pressure]),
+            )
+            material.SetSinglePhaseProp(
+                "pressure",
+                "Liquid",
+                None,
+                self.r8_array_variant([liquid_pressure]),
+            )
+        material.SetSinglePhaseProp(
+            "fraction",
+            "Vapor",
+            "Mole",
+            self.r8_array_variant(vapor_fractions),
+        )
+        material.SetSinglePhaseProp(
+            "fraction",
+            "Liquid",
+            "Mole",
+            self.r8_array_variant(liquid_fractions),
+        )
+        material.SetSinglePhaseProp(
+            "phaseFraction",
+            "Vapor",
+            "Mole",
+            self.r8_array_variant([vapor_beta]),
+        )
+        material.SetSinglePhaseProp(
+            "phaseFraction",
+            "Liquid",
+            "Mole",
+            self.r8_array_variant([liquid_beta]),
+        )
 
         rss_mb = self.rss_mb()
         logging.debug("PROCESS MEMORY: %r MB", rss_mb)
