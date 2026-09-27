@@ -44,12 +44,6 @@ from .utils_common import GNNPCSAFTPPbase, PMCState
 class ICapeUtilities(GNNPCSAFTPPbase, CAPEOPEN110.ICapeUtilities):
     "ICapeUtilities Class with methods implemented"
 
-    def __init__(self):
-        super().__init__()
-        self._pmc_state = PMCState.NON_INITIALIZED
-        self.simulation_context = None
-        self.components_smiles = []
-
     # -- GetParameters -----------------------------------------------------
     def _get_parameters(self):
         """

@@ -35,6 +35,22 @@ class OutboundVARIANT(VARIANT):
             _VariantClear(self)
 
 
+# ---------------------------------------------------------------------------
+# PMC lifecycle states (see spec section 3.4, State diagram)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class PMCState:
+    "PMC lifecycle states"
+
+    NON_INITIALIZED = "non_initialized"
+    INITIALIZING = "initializing"
+    EXECUTING = "executing"
+    TERMINATING = "terminating"
+    TERMINATED = "terminated"
+
+
 class GNNPCSAFTPPbase(ECapeUser):
     "ICapeIdentification Class with methods implemented"
 
@@ -42,7 +58,7 @@ class GNNPCSAFTPPbase(ECapeUser):
     components_smiles: List[str]
     pcsaft_parameters: Optional[List[List[float]]] = None
     _kij_matrix: Optional[List[List[float]]] = None
-    _pmc_state: str = "non_initialized"
+    _pmc_state: str = PMCState.NON_INITIALIZED
     simulation_context: Optional[CAPEOPEN110.ICapeSimulationContext] = None
 
     def rss_mb(self):
@@ -363,19 +379,3 @@ class GNNPCSAFTPPbase(ECapeUser):
             if value is not None:
                 return float(value)
         return None
-
-
-# ---------------------------------------------------------------------------
-# PMC lifecycle states (see spec section 3.4, State diagram)
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class PMCState:
-    "PMC lifecycle states"
-
-    NON_INITIALIZED = "non_initialized"
-    INITIALIZING = "initializing"
-    EXECUTING = "executing"
-    TERMINATING = "terminating"
-    TERMINATED = "terminated"
