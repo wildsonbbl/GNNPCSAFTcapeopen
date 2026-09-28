@@ -5,27 +5,20 @@ comtypes.
 Usage
 -----
     from comtypes.gen import CAPEOPEN110
-    from cape_utilities import CapeUtilitiesMixin
+    from interfaces.ICapeUtilities import ICapeUtilities
+    from interfaces.ICapePersistence import IPersistStreamInit
 
-    class MyPropertyPackage(CapeUtilitiesMixin, COMObject):
+    class MyPropertyPackage(ICapeUtilities, COMObject):
         _com_interfaces_ = [
             CAPEOPEN110.ICapeUtilities,
             CAPEOPEN110.ICapeIdentification,
             CAPEOPEN110.ICapeThermoPropertyPackage,
+            IPersistStreamInit
             # ... your other CO interfaces ...
         ]
-
-        def __init__(self):
-            super().__init__()
-            CapeUtilitiesMixin.__init__(self)   # sets up state + components_smiles
-
-After Initialize() succeeds, self.components_smiles is a list[str] of the
-SMILES strings the user entered, ready to be consumed by the rest of your
-Property Package (building the component list, calling RDKit, etc.).
 """
 
 from comtypes.gen import CAPEOPEN110
-from gnnepcsaft_mcp_server.utils import predict_pcsaft_parameters
 
 from .ecape_errors import (
     ECapeBadInvOrder,
@@ -34,14 +27,15 @@ from .ecape_errors import (
     ECapeNoImpl,
     ECapeUnknown,
 )
-from .utils_common import GNNPCSAFTPPbase, PMCState
+from .ICapePersistence import ICapePersistence
+from .utils_common import PMCState
 
 # ---------------------------------------------------------------------------
 # ICapeUtilities
 # ---------------------------------------------------------------------------
 
 
-class ICapeUtilities(GNNPCSAFTPPbase, CAPEOPEN110.ICapeUtilities):
+class ICapeUtilities(ICapePersistence, CAPEOPEN110.ICapeUtilities):
     "ICapeUtilities Class with methods implemented"
 
     # -- GetParameters -----------------------------------------------------
@@ -127,6 +121,9 @@ class ICapeUtilities(GNNPCSAFTPPbase, CAPEOPEN110.ICapeUtilities):
             )
 
         self._config_gnnpcsaft(smiles_list, kij_values)
+        mark_dirty = getattr(self, "_mark_dirty", None)
+        if mark_dirty is not None:
+            mark_dirty()
         self._pmc_state = PMCState.EXECUTING
         return 0
 
@@ -203,4 +200,7 @@ class ICapeUtilities(GNNPCSAFTPPbase, CAPEOPEN110.ICapeUtilities):
             # PMC state (component list) changed after Edit() returns and
             # re-integrating it (e.g. re-checking ports/connections).
             self._config_gnnpcsaft(new_smiles, new_kij_values)
+            mark_dirty = getattr(self, "_mark_dirty", None)
+            if mark_dirty is not None:
+                mark_dirty()
         return 0

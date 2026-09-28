@@ -45,6 +45,7 @@ from gnnepcsaft_mcp_server.utils import predict_pcsaft_parameters
 
 import interfaces
 from interfaces.ecape_errors import ECapeInvalidArgument
+from interfaces.ICapePersistence import IPersistStreamInit
 
 working_dir = Path(__file__).parent
 
@@ -86,12 +87,22 @@ class GNNPCSAFTPropertyPackage(
         CAPEOPEN110.ECapeUser,
         CAPEOPEN110.ECapeRoot,
         CAPEOPEN110.ICapeUtilities,
+        IPersistStreamInit,
         IUnknown,
     ]
 
     # def __init__(self) -> None:
     #     super().__init__()
     #     self.SetComponents(["O", "CCO"])
+
+    #     self.Initialize()
+
+    #     self.SetKijMatrix(
+    #         [
+    #             [0.0, -0.0033],
+    #             [-0.0033, 0.0],
+    #         ]
+    #     )
 
     def SetComponents(self, components_smiles: Iterable[str]):
         """Configure the fixed set of compounds this Property Package supports.
