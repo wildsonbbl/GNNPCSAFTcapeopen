@@ -2,13 +2,18 @@
 
 import copy
 import logging
+import math
 from typing import List
 
+import si_units as si
 from comtypes.gen import CAPEOPEN110
-from gnnepcsaft.pcsaft.feos import (
+from feos import Contributions  # pyright: ignore[reportAttributeAccessIssue]
+from gnnepcsaft.pcsaft.feos.pure import (
     critical_points_feos,
     pure_den_feos,
     pure_h_lv_feos,
+    pure_surface_tension_at_t_feos,
+    pure_vle_at_t_feos,
     pure_vp_feos,
 )
 
@@ -31,6 +36,9 @@ T_PROP_LIST = [
     "heatOfVaporization",
     "vaporPressure",
     "volumeOfLiquid",
+    "fugacityCoefficientOfVapor",
+    "volumeChangeUponVaporization",
+    "surfaceTensionSatLiquid",
 ]
 
 
@@ -129,6 +137,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
         )
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
         assert pcsaft_parameters is not None
+        assert self.components_smiles is not None
 
         return (
             self.bstr_array_variant(self.components_smiles),
@@ -168,6 +177,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
             interfaceName="ICapeThermoCompounds",
             operation="GetNumCompounds",
         )
+        assert self.components_smiles is not None
         return len(self.components_smiles)
 
     def GetPDependentProperty(self, props, pressure, compIds, propVals):
@@ -241,17 +251,42 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                     _propvals.append(
                         1 / pure_den_feos(pcsaft_parameters[idx], [temperature, vp])
                     )
-                if key in (
-                    "heatCapacityOfLiquid",
-                    "heatOfVaporization",
-                ):
+                if key == "heatOfVaporization":
                     h_lv = (
                         pure_h_lv_feos(pcsaft_parameters[idx], [temperature]) * 1000.0
                     )
-                    if key == "heatCapacityOfLiquid":
-                        _propvals.append(h_lv / temperature)
-                    else:
-                        _propvals.append(h_lv)
+                    _propvals.append(h_lv)
+
+                if key == "heatCapacityOfLiquid":
+                    vle = pure_vle_at_t_feos(
+                        parameters=pcsaft_parameters[idx], temperature=temperature
+                    )
+                    cp = vle.liquid.molar_isobaric_heat_capacity(
+                        Contributions.Residual
+                    ) / (si.JOULE / si.MOL / si.KELVIN)
+                    _propvals.append(cp)
+                if key == "fugacityCoefficientOfVapor":
+                    vle = pure_vle_at_t_feos(
+                        parameters=pcsaft_parameters[idx], temperature=temperature
+                    )
+                    ln_phi = vle.vapor.ln_phi()
+                    _propvals.append(math.exp(ln_phi[0]))
+                if key == "volumeChangeUponVaporization":
+                    vle = pure_vle_at_t_feos(
+                        parameters=pcsaft_parameters[idx], temperature=temperature
+                    )
+                    volume_vapor = 1 / vle.vapor.density / (si.METER**3 / si.MOL)
+                    volume_liquid = 1 / vle.liquid.density / (si.METER**3 / si.MOL)
+                    _propvals.append(volume_vapor - volume_liquid)
+                if key == "surfaceTensionSatLiquid":
+                    st = (
+                        pure_surface_tension_at_t_feos(
+                            parameters=pcsaft_parameters[idx], temperature=temperature
+                        )
+                        * 1e-3
+                    )
+                    _propvals.append(st)
+
                 logging.debug("IN TDependetProperty ---> %r = %r", key, _propvals)
         return self.r8_array_variant(_propvals)
 
@@ -268,6 +303,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
         return self.bstr_array_variant(T_PROP_LIST)
 
     def _compound_indices(self, compIds):
+        assert self.components_smiles is not None
         if compIds is None:
             return list(range(len(self.components_smiles)))
         lower_names = [n.lower() for n in self.components_smiles]
