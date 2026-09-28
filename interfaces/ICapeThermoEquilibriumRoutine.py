@@ -562,3 +562,77 @@ class ICapeThermoEquilibriumRoutine(
                 liquid_beta = 1.0 - vapor_beta
                 break
         return vapor_beta, liquid_beta
+
+
+def _find_t_from_phase_fraction(
+    state_temperature,
+    state_pressure,
+    overall_fractions,
+    pcsaft_parameters,
+    kij_matrix,
+    phasefraction,
+) -> float:
+
+    bp = (
+        mix_bp_at_fixed_pressure_feos(
+            parameters=pcsaft_parameters,
+            state=[state_temperature, state_pressure, *overall_fractions],
+            kij_matrix=kij_matrix,
+        )
+        * 1.001
+    )
+
+    dp = (
+        mix_dp_at_fixed_pressure_feos(
+            parameters=pcsaft_parameters,
+            state=[state_temperature, state_pressure, *overall_fractions],
+            kij_matrix=kij_matrix,
+        )
+        * 0.999
+    )
+
+    find_root = root_scalar(
+        f=lambda temperature: phasefraction
+        - mix_tp_flash_feos(
+            parameters=pcsaft_parameters,
+            state=[temperature, state_pressure, *overall_fractions],
+            kij_matrix=kij_matrix,
+        ).vapor_phase_fraction,
+        method="brentq",
+        bracket=[bp, dp],
+        x0=(bp + dp) / 2,
+    )
+
+    return find_root.root
+
+
+def _find_p_from_phase_fraction(
+    state_temperature,
+    state_pressure,
+    overall_fractions,
+    pcsaft_parameters,
+    kij_matrix,
+    phasefraction,
+) -> float:
+
+    bp, dp = mix_vp_feos(
+        parameters=pcsaft_parameters,
+        state=[state_temperature, state_pressure, *overall_fractions],
+        kij_matrix=kij_matrix,
+    )
+    bp *= 0.99
+    dp *= 1.01
+
+    find_root = root_scalar(
+        f=lambda pressure: phasefraction
+        - mix_tp_flash_feos(
+            parameters=pcsaft_parameters,
+            state=[state_temperature, pressure, *overall_fractions],
+            kij_matrix=kij_matrix,
+        ).vapor_phase_fraction,
+        method="brentq",
+        bracket=[dp, bp],
+        x0=(bp + dp) / 2,
+    )
+
+    return find_root.root
