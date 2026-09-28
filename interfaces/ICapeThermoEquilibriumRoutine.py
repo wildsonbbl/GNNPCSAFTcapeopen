@@ -15,6 +15,7 @@ from gnnepcsaft.pcsaft.feos.equilibria import (
     mix_tp_flash_feos,
     mix_vp_feos,
 )
+from scipy.optimize import root_scalar
 
 from . import ecape_errors
 from .ICapeThermoPropertyRoutine import (
@@ -74,6 +75,7 @@ class ICapeThermoEquilibriumRoutine(
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
         kij_matrix = copy.copy(self._kij_matrix)
         assert pcsaft_parameters is not None
+        assert kij_matrix is not None
 
         if not self.CheckEquilibriumSpec(specification1, specification2, solutionType):
             self.raise_cape_error(
@@ -132,13 +134,13 @@ class ICapeThermoEquilibriumRoutine(
                 if pressure > bp:
                     liquid_fractions = fractions
                     vapor_fractions = [0.0] * len(fractions)
+                    vapor_beta = 0.0
                 else:
+                    vapor_beta = 1.0
                     liquid_fractions = [0.0] * len(fractions)
                     vapor_fractions = fractions
 
-                vapor_beta, liquid_beta = self._get_vl_beta(
-                    fractions, liquid_fractions, vapor_fractions
-                )
+                liquid_beta = 1.0 - vapor_beta
 
                 self._set_equilibrium_for_stable_phase(
                     spec1,
@@ -161,7 +163,6 @@ class ICapeThermoEquilibriumRoutine(
                 spec2_0=spec2[0].lower(),
                 pcsaft_parameters=pcsaft_parameters,
                 kij_matrix=kij_matrix,
-                state=state,
             )
 
         except Exception as exc:  # pylint:disable=broad-exception-caught
@@ -180,7 +181,6 @@ class ICapeThermoEquilibriumRoutine(
             state=state,
             material=material,
             flash=flash,
-            overall_fractions=fractions,
         )
 
         return 0
@@ -357,8 +357,11 @@ class ICapeThermoEquilibriumRoutine(
         spec2_0: str,
         pcsaft_parameters: List[List[float]],
         kij_matrix: Optional[List[List[float]]],
-        state: List[float],
     ):
+        temperature = self._get_overall_scalar("temperature")
+        pressure = self._get_overall_scalar("pressure")
+        fractions = self._get_overall_fractions()
+        state = [temperature, pressure, *fractions]
         if spec1_0 in (
             "temperature",
             "pressure",
@@ -471,15 +474,13 @@ class ICapeThermoEquilibriumRoutine(
         state,
         material,
         flash,
-        overall_fractions,
     ):
 
         liquid_fractions = flash.liquid.molefracs
         vapor_fractions = flash.vapor.molefracs
 
-        vapor_beta, liquid_beta = self._get_vl_beta(
-            overall_fractions, liquid_fractions, vapor_fractions
-        )
+        vapor_beta = flash.vapor_phase_fraction
+        liquid_beta = 1.0 - vapor_beta
 
         liquid_temperature = flash.liquid.temperature / si.KELVIN
         liquid_pressure = flash.liquid.pressure() / si.PASCAL
