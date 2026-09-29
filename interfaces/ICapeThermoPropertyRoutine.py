@@ -5,11 +5,13 @@ import logging
 from typing import List
 
 import numpy as np
+import si_units as si
 from comtypes.gen import CAPEOPEN110
 from gnnepcsaft.pcsaft.feos.mixture import (
     mix_den_feos,
     mix_r_enthalpy_feos,
     mix_r_entropy_feos,
+    state_npt_feos,
 )
 from gnnepcsaft.pcsaft.pcsaft_feos import (
     mix_bp_at_fixed_pressure_feos,
@@ -33,6 +35,7 @@ _SINGLE_PHASE_PROPS = (
     "dewPointTemperature",
     "enthalpy",
     "entropy",
+    "compressibility",
 )
 _SINGLE_PHASE_PROPS_MOLE = (
     "density",
@@ -465,6 +468,14 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=phaseLabel.lower(),
                 )
             ]
+        if prop == "compressibility":
+            state_npt = state_npt_feos(
+                parameters=pcsaft_parameters,
+                state=state,
+                kij_matrix=_kij_matrix,
+                density_initialization=phaseLabel.lower(),
+            )
+            return [state_npt.isothermal_compressibility() / (1 / si.PASCAL)]
 
         return [float("nan")]
 
