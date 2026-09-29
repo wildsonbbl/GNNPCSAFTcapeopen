@@ -338,18 +338,22 @@ class ICapeThermoEquilibriumRoutine(
                 moreInfo="Both equilibrium specifications are required",
             )
         names = {str(spec1[0]).strip().lower(), str(spec2[0]).strip().lower()}
+        basis = {str(spec1[1]).strip().lower(), str(spec2[1]).strip().lower()}
+        phaselabels = {str(spec1[2]).strip().lower(), str(spec2[2]).strip().lower()}
         return (
-            names
-            in (
-                {"temperature", "pressure"},
-                {"temperature", "phasefraction"},
-                {"pressure", "phasefraction"},
-                # {"pressure", "enthalpy"}, # needs ideal gas model
-                # {"pressure", "entropy"}, # needs ideal gas model
+            (
+                names
+                in (
+                    {"temperature", "pressure"},
+                    {"temperature", "phasefraction"},
+                    {"pressure", "phasefraction"},
+                    # {"pressure", "enthalpy"}, # needs ideal gas model
+                    # {"pressure", "entropy"}, # needs ideal gas model
+                )
             )
-        ) and soltype in (
-            "unspecified",
-            "normal",
+            and soltype in ("unspecified", "normal")
+            and basis in ({"none"}, {"none", "mole"})
+            and phaselabels in ({"overall", "vapor"}, {"overall"})
         )
 
     def _compute_bp_or_dp(self, prop, pcsaft_parameters, state, kij_matrix):
