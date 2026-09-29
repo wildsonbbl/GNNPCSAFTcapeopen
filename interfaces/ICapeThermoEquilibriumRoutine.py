@@ -112,11 +112,23 @@ class ICapeThermoEquilibriumRoutine(
         logging.debug("IN CalcEquilibrium ---> state = %s", state)
 
         if spec1[0].lower() == "temperature" and spec2[0].lower() == "pressure":
-            if is_stable_feos(
-                parameters=pcsaft_parameters,
-                state=state_for_stability,
-                kij_matrix=kij_matrix,
-            ):
+            is_stable = True
+            try:
+                is_stable = is_stable_feos(
+                    parameters=pcsaft_parameters,
+                    state=state_for_stability,
+                    kij_matrix=kij_matrix,
+                )
+            except RuntimeError as exc:
+                self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description="Failed to calculate from"
+                    f" overall state = {state}: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                    moreInfo="It was not possible to conclude stability analysis.",
+                )
+            if is_stable:
                 logging.debug("STABLE PHASE")
 
                 bp, _dp = mix_vp_feos(
