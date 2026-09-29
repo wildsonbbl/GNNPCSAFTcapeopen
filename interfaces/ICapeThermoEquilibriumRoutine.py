@@ -154,7 +154,7 @@ class ICapeThermoEquilibriumRoutine(
                 flash = self._get_flash(
                     spec1_0=spec1[0].lower(), spec2_0=spec2[0].lower()
                 )
-            except Exception as exc:  # pylint:disable=broad-exception-caught
+            except (ValueError, RuntimeError) as exc:
                 self.raise_cape_error(
                     error_cls=ecape_errors.ECapeSolvingError,
                     description=f"Flash failed to converge: {exc}",
@@ -222,7 +222,7 @@ class ICapeThermoEquilibriumRoutine(
                     flash = self._get_flash(
                         spec1_0=spec1[0].lower(), spec2_0=spec2[0].lower()
                     )
-                except Exception as exc:  # pylint:disable=broad-exception-caught
+                except (ValueError, RuntimeError) as exc:
                     self.raise_cape_error(
                         error_cls=ecape_errors.ECapeSolvingError,
                         description=f"Flash failed to converge: {exc}",
@@ -289,7 +289,7 @@ class ICapeThermoEquilibriumRoutine(
                     flash = self._get_flash(
                         spec1_0=spec1[0].lower(), spec2_0=spec2[0].lower()
                     )
-                except Exception as exc:  # pylint:disable=broad-exception-caught
+                except (ValueError, RuntimeError) as exc:
                     self.raise_cape_error(
                         error_cls=ecape_errors.ECapeSolvingError,
                         description=f"Flash failed to converge: {exc}",
