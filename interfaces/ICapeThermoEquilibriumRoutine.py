@@ -2,7 +2,7 @@
 
 import copy
 import logging
-from typing import List, Optional
+from typing import List
 
 import si_units as si
 from comtypes.gen import CAPEOPEN110
@@ -120,7 +120,7 @@ class ICapeThermoEquilibriumRoutine(
             ),
         )
 
-        try:
+        if spec1[0].lower() == "temperature" and spec2[0].lower() == "pressure":
             if is_stable_feos(
                 parameters=pcsaft_parameters,
                 state=state_for_stability,
@@ -140,50 +140,165 @@ class ICapeThermoEquilibriumRoutine(
                     liquid_fractions = [0.0] * len(fractions)
                     vapor_fractions = fractions
 
-                liquid_beta = 1.0 - vapor_beta
-
                 self._set_equilibrium_for_stable_phase(
-                    spec1,
-                    spec2,
-                    pcsaft_parameters,
-                    kij_matrix,
-                    temperature,
-                    pressure,
-                    state,
-                    liquid_fractions,
-                    vapor_fractions,
-                    vapor_beta,
-                    liquid_beta,
-                    material,
+                    temperature=temperature,
+                    pressure=pressure,
+                    liquid_fractions=liquid_fractions,
+                    vapor_fractions=vapor_fractions,
+                    vapor_beta=vapor_beta,
                 )
                 return 0
+
             logging.debug("UNSTABLE PHASE")
-            flash = self._get_flash(
-                spec1_0=spec1[0].lower(),
-                spec2_0=spec2[0].lower(),
-                pcsaft_parameters=pcsaft_parameters,
-                kij_matrix=kij_matrix,
-            )
+            try:
+                flash = self._get_flash(
+                    spec1_0=spec1[0].lower(), spec2_0=spec2[0].lower()
+                )
+            except Exception as exc:  # pylint:disable=broad-exception-caught
+                self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description=f"Flash failed to converge: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                )
+            self._set_equilibrium_from_flash(flash=flash)
+            return 0
+        if spec1[0].lower() == "temperature" and spec2[0].lower() == "phasefraction":
+            phaseFraction = material.GetSinglePhaseProp(
+                "phaseFraction", "Vapor", "Mole", None
+            )[0]
+            logging.debug("IN CalcEquilibrium ---> phaseFraction = %r", phaseFraction)
+            if phaseFraction == 1.0:
+                prop = "dewPointPressure"
+                pressure = self._compute_bp_or_dp(
+                    prop=prop,
+                    pcsaft_parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
 
-        except Exception as exc:  # pylint:disable=broad-exception-caught
-            self.raise_cape_error(
-                error_cls=ecape_errors.ECapeSolvingError,
-                description=f"Flash failed to converge: {exc}",
-                interfaceName="ICapeThermoEquilibriumRoutine",
-                operation="CalcEquilibrium",
-            )
+                logging.debug("IN CalcEquilibrium --->%r = %r", prop, pressure)
+                liquid_fractions = [0.0] * len(fractions)
+                vapor_fractions = fractions
+                self._set_equilibrium_for_stable_phase(
+                    temperature=temperature,
+                    pressure=pressure[0],
+                    liquid_fractions=liquid_fractions,
+                    vapor_fractions=vapor_fractions,
+                    vapor_beta=phaseFraction,
+                )
 
-        self._set_equilibrium_from_flash(
-            spec1=spec1,
-            spec2=spec2,
-            pcsaft_parameters=pcsaft_parameters,
-            kij_matrix=kij_matrix,
-            state=state,
-            material=material,
-            flash=flash,
-        )
+            if phaseFraction == 0.0:
+                prop = "bubblePointPressure"
+                pressure = self._compute_bp_or_dp(
+                    prop=prop,
+                    pcsaft_parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+                logging.debug("IN CalcEquilibrium --->%r = %r", prop, pressure)
+                liquid_fractions = fractions
+                vapor_fractions = [0.0] * len(fractions)
+                self._set_equilibrium_for_stable_phase(
+                    temperature=temperature,
+                    pressure=pressure[0],
+                    liquid_fractions=liquid_fractions,
+                    vapor_fractions=vapor_fractions,
+                    vapor_beta=phaseFraction,
+                )
+            if 0.0 < phaseFraction < 1.0:
+                pressure = self._find_p_from_phase_fraction(
+                    state_temperature=state[0],
+                    state_pressure=state[1],
+                    overall_fractions=state[2:],
+                    pcsaft_parameters=pcsaft_parameters,
+                    kij_matrix=kij_matrix,
+                    phasefraction=phaseFraction,
+                )
+                material.SetOverallProp(
+                    "Pressure", None, self.r8_array_variant([pressure])
+                )
+                try:
+                    flash = self._get_flash(
+                        spec1_0=spec1[0].lower(), spec2_0=spec2[0].lower()
+                    )
+                except Exception as exc:  # pylint:disable=broad-exception-caught
+                    self.raise_cape_error(
+                        error_cls=ecape_errors.ECapeSolvingError,
+                        description=f"Flash failed to converge: {exc}",
+                        interfaceName="ICapeThermoEquilibriumRoutine",
+                        operation="CalcEquilibrium",
+                    )
+                self._set_equilibrium_from_flash(flash=flash)
+            return 0
 
-        return 0
+        if spec1[0].lower() == "pressure" and spec2[0].lower() == "phasefraction":
+            phaseFraction = material.GetSinglePhaseProp(
+                "phaseFraction", "Vapor", "Mole", None
+            )[0]
+            logging.debug("IN CalcEquilibrium ---> phaseFraction = %r", phaseFraction)
+            if phaseFraction == 1.0:
+                prop = "dewPointTemperature"
+                temperature = self._compute_bp_or_dp(
+                    prop=prop,
+                    pcsaft_parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+                logging.debug("IN CalcEquilibrium --->%r = %r", prop, temperature)
+                liquid_fractions = [0.0] * len(fractions)
+                vapor_fractions = fractions
+                self._set_equilibrium_for_stable_phase(
+                    temperature=temperature[0],
+                    pressure=pressure,
+                    liquid_fractions=liquid_fractions,
+                    vapor_fractions=vapor_fractions,
+                    vapor_beta=phaseFraction,
+                )
+            if phaseFraction == 0.0:
+                prop = "bubblePointTemperature"
+                temperature = self._compute_bp_or_dp(
+                    prop=prop,
+                    pcsaft_parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+                logging.debug("IN CalcEquilibrium --->%r = %r", prop, temperature)
+                liquid_fractions = fractions
+                vapor_fractions = [0.0] * len(fractions)
+                self._set_equilibrium_for_stable_phase(
+                    temperature=temperature[0],
+                    pressure=pressure,
+                    liquid_fractions=liquid_fractions,
+                    vapor_fractions=vapor_fractions,
+                    vapor_beta=phaseFraction,
+                )
+            if 0.0 < phaseFraction < 1.0:
+                temperature = self._find_t_from_phase_fraction(
+                    state_temperature=state[0],
+                    state_pressure=state[1],
+                    overall_fractions=state[2:],
+                    pcsaft_parameters=pcsaft_parameters,
+                    kij_matrix=kij_matrix,
+                    phasefraction=phaseFraction,
+                )
+                material.SetOverallProp(
+                    "Temperature", None, self.r8_array_variant([temperature])
+                )
+                try:
+                    flash = self._get_flash(
+                        spec1_0=spec1[0].lower(), spec2_0=spec2[0].lower()
+                    )
+                except Exception as exc:  # pylint:disable=broad-exception-caught
+                    self.raise_cape_error(
+                        error_cls=ecape_errors.ECapeSolvingError,
+                        description=f"Flash failed to converge: {exc}",
+                        interfaceName="ICapeThermoEquilibriumRoutine",
+                        operation="CalcEquilibrium",
+                    )
+                self._set_equilibrium_from_flash(flash=flash)
+            return 0
+        return 1
 
     def CheckEquilibriumSpec(
         self,
@@ -270,97 +385,14 @@ class ICapeThermoEquilibriumRoutine(
                 return [float("nan")]
         return [float("nan")]
 
-    def _not_setted_bp_or_dp(
-        self,
-        spec1: List[str],
-        spec2: List[str],
-        pcsaft_parameters: List[List[float]],
-        kij_matrix: List[List[float]],
-        state: List[float],
-        material: CAPEOPEN110.ICapeThermoMaterial,
-    ):
-        if (
-            spec1[0].lower() in ("temperature", "pressure")
-            and spec2[0].lower() == "phasefraction"
-            and spec2[2].lower() == "vapor"
-        ):
-            phaseFraction = material.GetSinglePhaseProp(
-                "phaseFraction", "Vapor", "Mole", None
-            )[0]
-
-            logging.debug("IN CalcEquilibrium ---> phaseFraction = %r", phaseFraction)
-
-            if spec1[0].lower() == "temperature":
-                if phaseFraction == 1.0:
-                    prop = "dewPointPressure"
-                    value = self._compute_bp_or_dp(
-                        prop=prop,
-                        pcsaft_parameters=pcsaft_parameters,
-                        state=state,
-                        kij_matrix=kij_matrix,
-                    )
-
-                    logging.debug("IN CalcEquilibrium --->%r = %r", prop, value)
-
-                    material.SetSinglePhaseProp(
-                        "Pressure", "Vapor", None, self.r8_array_variant(value)
-                    )
-
-                if phaseFraction == 0.0:
-                    prop = "bubblePointPressure"
-                    value = self._compute_bp_or_dp(
-                        prop=prop,
-                        pcsaft_parameters=pcsaft_parameters,
-                        state=state,
-                        kij_matrix=kij_matrix,
-                    )
-
-                    logging.debug("IN CalcEquilibrium --->%r = %r", prop, value)
-
-                    material.SetSinglePhaseProp(
-                        "Pressure", "Liquid", None, self.r8_array_variant(value)
-                    )
-            if spec1[0].lower() == "pressure":
-                if phaseFraction == 1.0:
-                    prop = "dewPointTemperature"
-                    value = self._compute_bp_or_dp(
-                        prop=prop,
-                        pcsaft_parameters=pcsaft_parameters,
-                        state=state,
-                        kij_matrix=kij_matrix,
-                    )
-
-                    logging.debug("IN CalcEquilibrium --->%r = %r", prop, value)
-
-                    material.SetSinglePhaseProp(
-                        "Temperature", "Vapor", None, self.r8_array_variant(value)
-                    )
-
-                if phaseFraction == 0.0:
-                    prop = "bubblePointTemperature"
-                    value = self._compute_bp_or_dp(
-                        prop=prop,
-                        pcsaft_parameters=pcsaft_parameters,
-                        state=state,
-                        kij_matrix=kij_matrix,
-                    )
-                    logging.debug("IN CalcEquilibrium --->%r = %r", prop, value)
-                    material.SetSinglePhaseProp(
-                        "Temperature", "Liquid", None, self.r8_array_variant(value)
-                    )
-            return False
-        return True
-
-    def _get_flash(
-        self,
-        spec1_0: str,
-        spec2_0: str,
-        pcsaft_parameters: List[List[float]],
-        kij_matrix: Optional[List[List[float]]],
-    ):
+    def _get_flash(self, spec1_0: str, spec2_0: str):
         temperature = self._get_overall_scalar("temperature")
         pressure = self._get_overall_scalar("pressure")
         fractions = self._get_overall_fractions()
+        pcsaft_parameters = self.pcsaft_parameters
+        assert pcsaft_parameters is not None
+        kij_matrix = self._kij_matrix
+        assert kij_matrix is not None
         state = [temperature, pressure, *fractions]
         if spec1_0 in (
             "temperature",
@@ -391,52 +423,38 @@ class ICapeThermoEquilibriumRoutine(
 
     def _set_equilibrium_for_stable_phase(
         self,
-        spec1,
-        spec2,
-        pcsaft_parameters,
-        kij_matrix,
-        temperature,
-        pressure,
-        state,
-        liquid_fractions,
-        vapor_fractions,
-        vapor_beta,
-        liquid_beta,
-        material,
+        temperature: float,
+        pressure: float,
+        liquid_fractions: List[float],
+        vapor_fractions: List[float],
+        vapor_beta: float,
     ):
-        if self._not_setted_bp_or_dp(
-            spec1,
-            spec2,
-            pcsaft_parameters,
-            kij_matrix,
-            state,
-            material,
-        ):
-
-            material.SetSinglePhaseProp(
-                "temperature",
-                "Vapor",
-                None,
-                self.r8_array_variant([temperature]),
-            )
-            material.SetSinglePhaseProp(
-                "temperature",
-                "Liquid",
-                None,
-                self.r8_array_variant([temperature]),
-            )
-            material.SetSinglePhaseProp(
-                "pressure",
-                "Vapor",
-                None,
-                self.r8_array_variant([pressure]),
-            )
-            material.SetSinglePhaseProp(
-                "pressure",
-                "Liquid",
-                None,
-                self.r8_array_variant([pressure]),
-            )
+        material = self.material
+        assert material is not None
+        material.SetSinglePhaseProp(
+            "temperature",
+            "Vapor",
+            None,
+            self.r8_array_variant([temperature]),
+        )
+        material.SetSinglePhaseProp(
+            "temperature",
+            "Liquid",
+            None,
+            self.r8_array_variant([temperature]),
+        )
+        material.SetSinglePhaseProp(
+            "pressure",
+            "Vapor",
+            None,
+            self.r8_array_variant([pressure]),
+        )
+        material.SetSinglePhaseProp(
+            "pressure",
+            "Liquid",
+            None,
+            self.r8_array_variant([pressure]),
+        )
         material.SetSinglePhaseProp(
             "fraction",
             "Vapor",
@@ -459,7 +477,7 @@ class ICapeThermoEquilibriumRoutine(
             "phaseFraction",
             "Liquid",
             "Mole",
-            self.r8_array_variant([liquid_beta]),
+            self.r8_array_variant([1 - vapor_beta]),
         )
 
         rss_mb = self.rss_mb()
@@ -467,12 +485,6 @@ class ICapeThermoEquilibriumRoutine(
 
     def _set_equilibrium_from_flash(
         self,
-        spec1,
-        spec2,
-        pcsaft_parameters,
-        kij_matrix,
-        state,
-        material,
         flash,
     ):
 
@@ -487,6 +499,8 @@ class ICapeThermoEquilibriumRoutine(
 
         vapor_temperature = flash.vapor.temperature / si.KELVIN
         vapor_pressure = flash.vapor.pressure() / si.PASCAL
+        material = self.material
+        assert material is not None
 
         logging.debug(
             "IN CalcEquilibrium ---> [liquid_fractions, vapor_fractions] == %s",
@@ -497,34 +511,30 @@ class ICapeThermoEquilibriumRoutine(
             [liquid_beta, vapor_beta],
         )
 
-        if self._not_setted_bp_or_dp(
-            spec1, spec2, pcsaft_parameters, kij_matrix, state, material
-        ):
-
-            material.SetSinglePhaseProp(
-                "temperature",
-                "Vapor",
-                None,
-                self.r8_array_variant([vapor_temperature]),
-            )
-            material.SetSinglePhaseProp(
-                "temperature",
-                "Liquid",
-                None,
-                self.r8_array_variant([liquid_temperature]),
-            )
-            material.SetSinglePhaseProp(
-                "pressure",
-                "Vapor",
-                None,
-                self.r8_array_variant([vapor_pressure]),
-            )
-            material.SetSinglePhaseProp(
-                "pressure",
-                "Liquid",
-                None,
-                self.r8_array_variant([liquid_pressure]),
-            )
+        material.SetSinglePhaseProp(
+            "temperature",
+            "Vapor",
+            None,
+            self.r8_array_variant([vapor_temperature]),
+        )
+        material.SetSinglePhaseProp(
+            "temperature",
+            "Liquid",
+            None,
+            self.r8_array_variant([liquid_temperature]),
+        )
+        material.SetSinglePhaseProp(
+            "pressure",
+            "Vapor",
+            None,
+            self.r8_array_variant([vapor_pressure]),
+        )
+        material.SetSinglePhaseProp(
+            "pressure",
+            "Liquid",
+            None,
+            self.r8_array_variant([liquid_pressure]),
+        )
         material.SetSinglePhaseProp(
             "fraction",
             "Vapor",
@@ -564,76 +574,100 @@ class ICapeThermoEquilibriumRoutine(
                 break
         return vapor_beta, liquid_beta
 
+    def _find_t_from_phase_fraction(
+        self,
+        state_temperature,
+        state_pressure,
+        overall_fractions,
+        pcsaft_parameters,
+        kij_matrix,
+        phasefraction,
+    ) -> float:
 
-def _find_t_from_phase_fraction(
-    state_temperature,
-    state_pressure,
-    overall_fractions,
-    pcsaft_parameters,
-    kij_matrix,
-    phasefraction,
-) -> float:
+        bp = (
+            mix_bp_at_fixed_pressure_feos(
+                parameters=pcsaft_parameters,
+                state=[state_temperature, state_pressure, *overall_fractions],
+                kij_matrix=kij_matrix,
+            )
+            * 1.001
+        )
 
-    bp = (
-        mix_bp_at_fixed_pressure_feos(
+        dp = (
+            mix_dp_at_fixed_pressure_feos(
+                parameters=pcsaft_parameters,
+                state=[state_temperature, state_pressure, *overall_fractions],
+                kij_matrix=kij_matrix,
+            )
+            * 0.999
+        )
+
+        try:
+            find_root = root_scalar(
+                f=lambda temperature: phasefraction
+                - mix_tp_flash_feos(
+                    parameters=pcsaft_parameters,
+                    state=[temperature, state_pressure, *overall_fractions],
+                    kij_matrix=kij_matrix,
+                ).vapor_phase_fraction,
+                method="brentq",
+                bracket=[bp, dp],
+                x0=(bp + dp) / 2,
+            )
+        except ValueError:
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeComputation,
+                description=f"Failed to calculate from vapor phase fraction = {phasefraction}."
+                " Try increasing/decreasing set vapor phase fraction or"
+                " setting temperature/pressure values close to bubble/dew points directly.",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CalcEquilibrium",
+                moreInfo="This usually happens because the root finding algorithm failed to"
+                " find a solution from a phase fraction too close to 0.0 or 1.0.",
+            )
+
+        return find_root.root
+
+    def _find_p_from_phase_fraction(
+        self,
+        state_temperature,
+        state_pressure,
+        overall_fractions,
+        pcsaft_parameters,
+        kij_matrix,
+        phasefraction,
+    ) -> float:
+
+        bp, dp = mix_vp_feos(
             parameters=pcsaft_parameters,
             state=[state_temperature, state_pressure, *overall_fractions],
             kij_matrix=kij_matrix,
         )
-        * 1.001
-    )
+        bp *= 0.99
+        dp *= 1.01
 
-    dp = (
-        mix_dp_at_fixed_pressure_feos(
-            parameters=pcsaft_parameters,
-            state=[state_temperature, state_pressure, *overall_fractions],
-            kij_matrix=kij_matrix,
-        )
-        * 0.999
-    )
+        try:
+            find_root = root_scalar(
+                f=lambda pressure: phasefraction
+                - mix_tp_flash_feos(
+                    parameters=pcsaft_parameters,
+                    state=[state_temperature, pressure, *overall_fractions],
+                    kij_matrix=kij_matrix,
+                ).vapor_phase_fraction,
+                method="brentq",
+                bracket=[dp, bp],
+                x0=(bp + dp) / 2,
+            )
+        except ValueError:
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeComputation,
+                description=f"Failed to calculate from vapor phase fraction = {phasefraction}."
+                " Try increasing/decreasing set vapor phase fraction or"
+                " setting temperature/pressure values close to bubble/dew points directly.",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CalcEquilibrium",
+                moreInfo="This usually happens because the root finding algorithm failed to"
+                " find a solution from a phase fraction too close to 0.0 or 1.0.",
+            )
 
-    find_root = root_scalar(
-        f=lambda temperature: phasefraction
-        - mix_tp_flash_feos(
-            parameters=pcsaft_parameters,
-            state=[temperature, state_pressure, *overall_fractions],
-            kij_matrix=kij_matrix,
-        ).vapor_phase_fraction,
-        method="brentq",
-        bracket=[bp, dp],
-        x0=(bp + dp) / 2,
-    )
-
-    return find_root.root
-
-
-def _find_p_from_phase_fraction(
-    state_temperature,
-    state_pressure,
-    overall_fractions,
-    pcsaft_parameters,
-    kij_matrix,
-    phasefraction,
-) -> float:
-
-    bp, dp = mix_vp_feos(
-        parameters=pcsaft_parameters,
-        state=[state_temperature, state_pressure, *overall_fractions],
-        kij_matrix=kij_matrix,
-    )
-    bp *= 0.99
-    dp *= 1.01
-
-    find_root = root_scalar(
-        f=lambda pressure: phasefraction
-        - mix_tp_flash_feos(
-            parameters=pcsaft_parameters,
-            state=[state_temperature, pressure, *overall_fractions],
-            kij_matrix=kij_matrix,
-        ).vapor_phase_fraction,
-        method="brentq",
-        bracket=[dp, bp],
-        x0=(bp + dp) / 2,
-    )
-
-    return find_root.root
+        return find_root.root
