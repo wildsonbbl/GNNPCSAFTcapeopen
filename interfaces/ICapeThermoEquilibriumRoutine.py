@@ -620,7 +620,7 @@ class ICapeThermoEquilibriumRoutine(
             )
         except ValueError:
             self.raise_cape_error(
-                error_cls=ecape_errors.ECapeComputation,
+                error_cls=ecape_errors.ECapeSolvingError,
                 description=f"Failed to calculate from vapor phase fraction = {phasefraction}."
                 " Try increasing/decreasing set vapor phase fraction or"
                 " setting temperature/pressure values close to bubble/dew points directly.",
@@ -664,7 +664,7 @@ class ICapeThermoEquilibriumRoutine(
             )
         except ValueError:
             self.raise_cape_error(
-                error_cls=ecape_errors.ECapeComputation,
+                error_cls=ecape_errors.ECapeSolvingError,
                 description=f"Failed to calculate from vapor phase fraction = {phasefraction}."
                 " Try increasing/decreasing set vapor phase fraction or"
                 " setting temperature/pressure values close to bubble/dew points directly.",
