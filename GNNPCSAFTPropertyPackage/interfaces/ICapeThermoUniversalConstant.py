@@ -39,7 +39,7 @@ class ICapeThermoUniversalConstant(
         """
         if constantId in _UNIVERSAL_CONSTANTS:
             return _UNIVERSAL_CONSTANTS[constantId]
-        self.raise_cape_error(
+        return self.raise_cape_error(
             error_cls=ECapeInvalidArgument,
             description=f"Unknown universal constant identifier: {constantId!r}",
             interfaceName="ICapeThermoUniversalConstant",
