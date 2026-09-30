@@ -59,6 +59,7 @@ def _no_clear(self):  # pylint:disable=unused-argument
     reactivated here in interfaces.utils_common.OutboundVARIANT,
     so that it's used only on python-created VARIANTs.
     """
+    logging.debug("TRIED CALLING _VariantClear ON %r", self)
 
 
 auto.VARIANT.__del__ = _no_clear

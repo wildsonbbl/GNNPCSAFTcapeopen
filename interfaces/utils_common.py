@@ -1,6 +1,7 @@
 "Utilities common to all interfaces"
 
 import array
+import logging
 import re
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
@@ -35,6 +36,7 @@ class OutboundVARIANT(VARIANT):
     def __del__(self):
         if self._b_needsfree_:  # pylint: disable = using-constant-test
             _VariantClear(self)
+            logging.debug("CALLED _VariantClear ON %r", self)
 
 
 # ---------------------------------------------------------------------------
