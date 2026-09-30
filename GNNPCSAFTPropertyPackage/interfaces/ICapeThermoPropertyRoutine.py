@@ -14,11 +14,8 @@ from gnnepcsaft.pcsaft.feos.mixture import (
     state_npt_feos,
 )
 from gnnepcsaft.pcsaft.pcsaft_feos import (
-    mix_bp_at_fixed_pressure_feos,
-    mix_dp_at_fixed_pressure_feos,
     mix_ln_activity_coefficient,
     mix_ln_fugacity_coefficient,
-    mix_vp_feos,
 )
 
 from . import ecape_errors
