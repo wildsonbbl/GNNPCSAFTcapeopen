@@ -195,8 +195,8 @@ def unregister_capeopen_category():
         pass
 
 
-if __name__ == "__main__":
-
+def main():
+    "Register/Unregister/Run GNNPCSAFTPropertyPackage"
     if "-regserver" in sys.argv:
         UseCommandLine(GNNPCSAFTPropertyPackage)
         register_capeopen_category()
@@ -207,3 +207,7 @@ if __name__ == "__main__":
         print("Successfully unregistered GNNPCSAFTPropertyPackage.")
     else:
         UseCommandLine(GNNPCSAFTPropertyPackage)
+
+
+if __name__ == "__main__":
+    main()
