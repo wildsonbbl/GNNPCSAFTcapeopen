@@ -16,18 +16,18 @@ Other implementations with GNNPCSAFT:
 
 ### Installation
 
-You need [uvx](https://docs.astral.sh/uv/) installed.
+You need [Python](https://www.python.org/) installed.
 
 ### Installing the GNNPCSAFT CAPE-OPEN Property Package Server
 
 ```bash
-uv tool install gnnpcsaft-cape-open
+pip install GNNPCSAFTPropertyPackage
 ```
 
 ### Registering the Server
 
 ```bash
-gnnpcsaft-cape-open -regserver
+GNNPCSAFTPropertyPackage.exe -regserver
 ```
 
 After registering the server, you can use it in any CAPE-OPEN compliant software.
@@ -35,7 +35,7 @@ After registering the server, you can use it in any CAPE-OPEN compliant software
 ### Unregistering the Server
 
 ```bash
-gnnpcsaft-cape-open -unregserver
+GNNPCSAFTPropertyPackage.exe -unregserver
 ```
 
 ---
