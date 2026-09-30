@@ -62,29 +62,34 @@ class GNNPCSAFTPPbase(ECapeUser):
     _pmc_state: str = PMCState.NON_INITIALIZED
     simulation_context: Optional[CAPEOPEN110.ICapeSimulationContext] = None
 
-    def rss_mb(self):
+    @staticmethod
+    def rss_mb():
         "check process memory"
         return proc.memory_info().rss / (1024 * 1024)
 
-    def bstr_array_variant(self, values: List[str]):
+    @staticmethod
+    def bstr_array_variant(values: List[str]):
         "make array with type VT_ARRAY | VT_BSTR"
         sa = _midlSAFEARRAY(BSTR).from_param(list(values))
         bstr_array = OutboundVARIANT(sa)
         return bstr_array
 
-    def r8_array_variant(self, values: List[float]):
+    @staticmethod
+    def r8_array_variant(values: List[float]):
         "make array with type VT_ARRAY | VT_R8"
         sa = array.array("d", list(values))
         r8_array = OutboundVARIANT(sa)
         return r8_array
 
-    def i4_array_variant(self, values: List[int]):
+    @staticmethod
+    def i4_array_variant(values: List[int]):
         "make array with type VT_ARRAY | VT_I4"
         sa = array.array("l", list(values))
         i4_array = OutboundVARIANT(sa)
         return i4_array
 
-    def empty_array_variant(self):
+    @staticmethod
+    def empty_array_variant():
         "make empty array"
         empty_array = OutboundVARIANT()
         return empty_array
@@ -128,7 +133,8 @@ class GNNPCSAFTPPbase(ECapeUser):
     # input (empty strings, stray whitespace-only lines) before you hand the
     # list off to your chemistry backend.
 
-    def _validate_smiles_syntax(self, smiles):
+    @staticmethod
+    def _validate_smiles_syntax(smiles):
         """Cheap sanity check; raises ValueError with a human-readable reason."""
         s = smiles.strip()
         if not s:
