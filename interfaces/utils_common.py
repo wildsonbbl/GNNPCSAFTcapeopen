@@ -24,10 +24,11 @@ proc = psutil.Process()
 
 class OutboundVARIANT(VARIANT):
     """
-    Comtypes orignial VARIANT tries to call oleaut32.VariantClear on all
+    Comtypes original VARIANT tries to call oleaut32.VariantClear on all
     VARIANTs, including the ones received by the Property Package. This
-    results in a silent crash for trying to clear a memory twice. To solve
-    this, _VariantClear needs to be disabled on the comtypes side and
+    results in a silent crash for trying to clear a memory twice.
+
+    To solve this, _VariantClear needs to be disabled on the comtypes side and
     reactivated here so that it's used only on python-created VARIANTs.
     """
 

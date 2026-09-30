@@ -22,6 +22,7 @@ import winreg
 from pathlib import Path
 from typing import Iterable, Sequence
 
+import comtypes.automation as auto
 from comtypes import (
     CLSCTX_INPROC_SERVER,
     GUID,
@@ -46,6 +47,21 @@ from gnnepcsaft_mcp_server.utils import predict_pcsaft_parameters
 import interfaces
 from interfaces.ecape_errors import ECapeInvalidArgument
 from interfaces.ICapePersistence import IPersistStreamInit
+
+
+def _no_clear(self):  # pylint:disable=unused-argument
+    """
+    Comtypes original VARIANT tries to call oleaut32.VariantClear on all
+    VARIANTs, including the ones received by the Property Package. This
+    results in a silent crash for trying to clear a memory twice.
+
+    To solve this, _VariantClear needs to be disabled on the comtypes side and
+    reactivated here in interfaces.utils_common.OutboundVARIANT,
+    so that it's used only on python-created VARIANTs.
+    """
+
+
+auto.VARIANT.__del__ = _no_clear
 
 working_dir = Path(__file__).parent
 
