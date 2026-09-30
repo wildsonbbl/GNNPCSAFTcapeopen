@@ -257,7 +257,7 @@ class GNNPCSAFTPPbase(ECapeUser):
                     f"kij values should match the number of SMILES strings"
                     f" to make the {size}x{size} kij matrix.\n\n"
                     f"Expected {expected} kij values (k12 k13 ...),"
-                    f" got {len(result["kij_values"])}",
+                    f" got {len(result['kij_values'])}",
                 )
                 return
 
