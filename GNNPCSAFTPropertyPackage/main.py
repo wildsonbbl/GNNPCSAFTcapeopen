@@ -35,7 +35,7 @@ from comtypes.server.register import UseCommandLine
 # 1. Importar/Gerar as interfaces do CAPE-OPEN v1.1 a partir do TypeLib oficial
 try:
 
-    GetModule("./CAPE-OPENv1-1-0.tlb")
+    GetModule(str(Path(__file__).parent / "CAPE-OPENv1-1-0.tlb"))
     from comtypes.gen import CAPEOPEN110
 except Exception as e:
     raise RuntimeError(
@@ -44,9 +44,9 @@ except Exception as e:
 
 from gnnepcsaft_mcp_server.utils import predict_pcsaft_parameters
 
-from . import interfaces
-from .interfaces.ecape_errors import ECapeInvalidArgument
-from .interfaces.ICapePersistence import IPersistStreamInit
+from GNNPCSAFTPropertyPackage import interfaces
+from GNNPCSAFTPropertyPackage.interfaces.ecape_errors import ECapeInvalidArgument
+from GNNPCSAFTPropertyPackage.interfaces.ICapePersistence import IPersistStreamInit
 
 
 def _no_clear(self):  # pylint:disable=unused-argument
