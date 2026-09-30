@@ -29,10 +29,6 @@ _SINGLE_PHASE_PROPS = (
     "density",
     "logFugacityCoefficient",
     "molecularWeight",
-    "bubblePointPressure",
-    "dewPointPressure",
-    "bubblePointTemperature",
-    "dewPointTemperature",
     "enthalpy",
     "entropy",
     "compressibility",
@@ -316,7 +312,9 @@ class ICapeThermoPropertyRoutine(
         logging.debug("PROCESS MEMORY: %r MB", rss_mb)
         return 0
 
-    def CheckSinglePhasePropSpec(self, property, phaseLabel):
+    def CheckSinglePhasePropSpec(
+        self, property, phaseLabel  # pylint: disable=redefined-builtin
+    ):
         """
         Checks whether CalcSinglePhaseProp can calculate the given property
         for the given Phase. Depends only on this component's capabilities
@@ -335,7 +333,9 @@ class ICapeThermoPropertyRoutine(
         """
         return property in _SINGLE_PHASE_PROPS and phaseLabel in _PHASE_LABELS
 
-    def CheckTwoPhasePropSpec(self, property, phaseLabels):
+    def CheckTwoPhasePropSpec(
+        self, property, phaseLabels  # pylint: disable=redefined-builtin
+    ):
         """
         Checks whether CalcTwoPhaseProp can calculate the given property for
         the given pair of Phases. Depends only on this component's
@@ -415,41 +415,6 @@ class ICapeThermoPropertyRoutine(
                     for frac, params in zip(state[2:], pcsaft_parameters)
                 )
             ]
-        if prop in ("dewPointPressure", "bubblePointPressure"):
-            if 1.0 in state:
-                return [float("nan")]
-            bp, dp = mix_vp_feos(
-                parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
-            )
-            if prop == "bubblePointPressure":
-                return [bp]
-            return [dp]
-        if prop == "dewPointTemperature":
-            if 1.0 in state:
-                return [float("nan")]
-            try:
-                return [
-                    mix_dp_at_fixed_pressure_feos(
-                        parameters=pcsaft_parameters,
-                        state=state,
-                        kij_matrix=_kij_matrix,
-                    )
-                ]
-            except Exception:  # pylint:disable=broad-exception-caught
-                return [float("nan")]
-        if prop == "bubblePointTemperature":
-            if 1.0 in state:
-                return [float("nan")]
-            try:
-                return [
-                    mix_bp_at_fixed_pressure_feos(
-                        parameters=pcsaft_parameters,
-                        state=state,
-                        kij_matrix=_kij_matrix,
-                    )
-                ]
-            except Exception:  # pylint:disable=broad-exception-caught
-                return [float("nan")]
         if prop == "enthalpy":
             return [
                 mix_r_enthalpy_feos(
