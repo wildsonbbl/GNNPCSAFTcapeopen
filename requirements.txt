@@ -1,4 +1,4 @@
 gnnepcsaft>=0.5.6
 gnnepcsaft_mcp_server>=0.5.9
-comtypes>=1.4.167
+comtypes>=1.4.16
 psutil
