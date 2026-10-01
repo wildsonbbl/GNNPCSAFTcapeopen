@@ -181,17 +181,21 @@ def register_capeopen_category():
 
 
 def unregister_capeopen_category():
-    "Unregister CO ProgId, Category and Metadata"
+    "Remove the extra keys added by register_capeopen_category"
+    base = f"CLSID\\{CLSID}"
+    # children first: a key with subkeys cannot be deleted
+    _delete_key_if_exists(
+        winreg.HKEY_CLASSES_ROOT, f"{base}\\Implemented Categories\\{CATEGORY_ID}"
+    )
+    _delete_key_if_exists(winreg.HKEY_CLASSES_ROOT, f"{base}\\Implemented Categories")
+    _delete_key_if_exists(winreg.HKEY_CLASSES_ROOT, f"{base}\\CapeDescription")
+    # ProgID / CLSID root keys are left for comtypes' own unregister
+
+
+def _delete_key_if_exists(root, path):
+    "Delete a registry key, ignoring it if it does not exist."
     try:
-        winreg.DeleteKey(
-            winreg.HKEY_CLASSES_ROOT,
-            f"CLSID\\{CLSID}\\Implemented Categories\\{CATEGORY_ID}",
-        )
-        winreg.DeleteKey(
-            winreg.HKEY_CLASSES_ROOT,
-            f"{PROGID}\\CLSID",
-        )
-        winreg.DeleteKey(winreg.HKEY_CLASSES_ROOT, PROGID)
+        winreg.DeleteKey(root, path)
     except FileNotFoundError:
         pass
 
