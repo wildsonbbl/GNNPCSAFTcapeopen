@@ -29,7 +29,7 @@ keywords = [
     "pc-saft",
 ]
 classifiers = [
-  "Development Status :: 5 - Production/Beta",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Intended Audience :: Education",
   "Intended Audience :: End Users/Desktop",
