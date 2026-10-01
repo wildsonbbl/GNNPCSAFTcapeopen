@@ -1,0 +1,66 @@
+[project]
+name = "GNNPCSAFTPropertyPackage"
+version = "0.1.0"
+description = "GNNPCSAFT CAPE-OPEN Property Package"
+authors = [
+    {name = "wildsonbbl", email = "wil_bbl@hotmail.com"}
+]
+maintainers = [
+    {name = "wildsonbbl", email = "wil_bbl@hotmail.com"}
+]
+license = "GPL-3.0-or-later"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "gnnepcsaft_mcp_server>=0.5.9",
+    "comtypes>=1.4.16; sys_platform == 'win32'",
+    "psutil>=7.2.2",
+]
+keywords = [
+    "pcsaft", 
+    "graph-neural-network", 
+    "gnn", 
+    "equation-of-state", 
+    "chemical-engineering", 
+    "thermodynamics", 
+    "CAPE-OPEN",
+    "simulation",
+    "pcp-saft",
+    "pc-saft",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Education",
+  "Intended Audience :: End Users/Desktop",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pylint", 
+    "pytest",
+    "ipywidgets",
+    "matplotlib",
+]
+
+[project.urls]
+Repository = "https://github.com/wildsonbbl/GNNPCSAFTcapeopen"
+Issues = "https://github.com/wildsonbbl/GNNPCSAFTcapeopen/issues"
+
+[project.scripts]
+GNNPCSAFTPropertyPackage = "GNNPCSAFTPropertyPackage.main:main"
+
+[tool.poetry]
+packages = [{ include = "GNNPCSAFTPropertyPackage" }]
+include = ["GNNPCSAFTPropertyPackage/CAPE-OPENv1-1-0.tlb"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
