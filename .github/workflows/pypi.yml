@@ -13,6 +13,7 @@ jobs:
     runs-on: [windows-latest]
     permissions:
       id-token: write
+    environment: pypi_env
     steps:
       - uses: actions/checkout@v7
       - name: Install uv
