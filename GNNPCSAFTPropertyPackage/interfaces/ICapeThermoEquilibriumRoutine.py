@@ -107,86 +107,20 @@ class ICapeThermoEquilibriumRoutine(
         if spec2[0].lower() == "entropy":
             entropy = self._get_overall_scalar("entropy", "Mole")
             state = [temperature, pressure, entropy, *fractions]
-        state_for_stability = [temperature, pressure, *fractions]
 
         logging.debug("IN CalcEquilibrium ---> state = %s", state)
 
         if spec1[0].lower() == "temperature" and spec2[0].lower() == "pressure":
-            is_stable = True
-            try:
-                is_stable = is_stable_feos(
-                    parameters=pcsaft_parameters,
-                    state=state_for_stability,
-                    kij_matrix=kij_matrix,
-                )
-            except RuntimeError as exc:
-                self.raise_cape_error(
-                    error_cls=ecape_errors.ECapeSolvingError,
-                    description="Failed to calculate from"
-                    f" overall state = {state}: {exc}",
-                    interfaceName="ICapeThermoEquilibriumRoutine",
-                    operation="CalcEquilibrium",
-                    moreInfo="It was not possible to conclude stability analysis.",
-                )
-            if is_stable:
-                logging.debug("STABLE PHASE")
-
-                bp, _dp = mix_vp_feos(
-                    parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
-                )
-                if pressure > bp:
-                    stable_phase_label = "Liquid"
-                else:
-                    stable_phase_label = "Vapor"
-
-                material.SetPresentPhases(
-                    self.bstr_array_variant([stable_phase_label]),
-                    self.i4_array_variant([CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS]),
-                )
-                self._set_equilibrium_for_stable_phase(
-                    temperature=temperature,
-                    pressure=pressure,
-                    fractions_at_phase=fractions,
-                    phase_label=stable_phase_label,
-                )
-                material.SetPresentPhases(
-                    self.bstr_array_variant([stable_phase_label]),
-                    self.i4_array_variant([CAPEOPEN110.CAPE_ATEQUILIBRIUM]),
-                )
-                return 0
-
-            logging.debug("UNSTABLE PHASE")
-            material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                    ]
-                ),
+            return self._tp_equilibrium_logic(
+                spec1=spec1,
+                spec2=spec2,
+                pcsaft_parameters=pcsaft_parameters,
+                kij_matrix=kij_matrix,
+                temperature=temperature,
+                pressure=pressure,
+                fractions=fractions,
+                material=material,
             )
-            try:
-                flash = self._get_flash(
-                    spec1_0=spec1[0].lower(), spec2_0=spec2[0].lower()
-                )
-            except (ValueError, RuntimeError) as exc:
-                self.raise_cape_error(
-                    error_cls=ecape_errors.ECapeSolvingError,
-                    description=f"Flash failed to converge: {exc}",
-                    interfaceName="ICapeThermoEquilibriumRoutine",
-                    operation="CalcEquilibrium",
-                )
-            self._set_equilibrium_from_flash(flash=flash)
-            material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                    ]
-                ),
-            )
-            return 0
         if spec1[0].lower() == "temperature" and spec2[0].lower() == "phasefraction":
             phaseFraction = material.GetSinglePhaseProp(
                 "phaseFraction", "Vapor", "Mole", None
@@ -761,3 +695,89 @@ class ICapeThermoEquilibriumRoutine(
                 moreInfo="Bubble/dew point calculation or the root finding on"
                 " the vapor phase fraction did not converge.",
             )
+
+    def _tp_equilibrium_logic(
+        self,
+        spec1: List[str],
+        spec2: List[str],
+        pcsaft_parameters: List[List[float]],
+        kij_matrix: List[List[float]],
+        temperature: float,
+        pressure: float,
+        fractions: List[float],
+        material: CAPEOPEN110.ICapeThermoMaterial,
+    ):
+        is_stable = True
+        state = [temperature, pressure, *fractions]
+        try:
+            is_stable = is_stable_feos(
+                parameters=pcsaft_parameters,
+                state=state,
+                kij_matrix=kij_matrix,
+            )
+        except RuntimeError as exc:
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeSolvingError,
+                description="Failed to calculate from"
+                f" overall state = {state}: {exc}",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CalcEquilibrium",
+                moreInfo="It was not possible to conclude stability analysis.",
+            )
+        if is_stable:
+            logging.debug("STABLE PHASE")
+
+            bp, _dp = mix_vp_feos(
+                parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+            )
+            if pressure > bp:
+                stable_phase_label = "Liquid"
+            else:
+                stable_phase_label = "Vapor"
+
+            material.SetPresentPhases(
+                self.bstr_array_variant([stable_phase_label]),
+                self.i4_array_variant([CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS]),
+            )
+            self._set_equilibrium_for_stable_phase(
+                temperature=temperature,
+                pressure=pressure,
+                fractions_at_phase=fractions,
+                phase_label=stable_phase_label,
+            )
+            material.SetPresentPhases(
+                self.bstr_array_variant([stable_phase_label]),
+                self.i4_array_variant([CAPEOPEN110.CAPE_ATEQUILIBRIUM]),
+            )
+            return 0
+
+        logging.debug("UNSTABLE PHASE")
+        material.SetPresentPhases(
+            self.bstr_array_variant(["Vapor", "Liquid"]),
+            self.i4_array_variant(
+                [
+                    CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
+                    CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
+                ]
+            ),
+        )
+        try:
+            flash = self._get_flash(spec1_0=spec1[0].lower(), spec2_0=spec2[0].lower())
+        except (ValueError, RuntimeError) as exc:
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeSolvingError,
+                description=f"Flash failed to converge: {exc}",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CalcEquilibrium",
+            )
+        self._set_equilibrium_from_flash(flash=flash)
+        material.SetPresentPhases(
+            self.bstr_array_variant(["Vapor", "Liquid"]),
+            self.i4_array_variant(
+                [
+                    CAPEOPEN110.CAPE_ATEQUILIBRIUM,
+                    CAPEOPEN110.CAPE_ATEQUILIBRIUM,
+                ]
+            ),
+        )
+        return 0
