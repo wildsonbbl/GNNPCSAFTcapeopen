@@ -17,6 +17,7 @@ Property Package is expected to implement both.
 """
 
 import logging
+import os
 import sys
 import winreg
 from pathlib import Path
@@ -70,7 +71,7 @@ logging.basicConfig(
     filename=working_dir / "app.log",  # Name of the log file
     filemode="a",  # 'a' to append, 'w' to overwrite
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.DEBUG,  # Minimum log level to capture
+    level=os.environ.get("GNNPCSAFTPropertyPackage_LOGLEVEL", "INFO"),
 )
 
 
