@@ -8,11 +8,14 @@ from typing import List
 import si_units as si
 from comtypes.gen import CAPEOPEN110
 from feos import Contributions  # pyright: ignore[reportAttributeAccessIssue]
+from feos import PhaseEquilibrium  # pyright: ignore[reportAttributeAccessIssue]
 from gnnepcsaft.pcsaft.feos.pure import (
     critical_points_feos,
+    pc_saft,
     pure_den_feos,
     pure_h_lv_feos,
     pure_surface_tension_at_t_feos,
+    pure_vle_at_p_feos,
     pure_vle_at_t_feos,
     pure_vp_feos,
 )
@@ -114,12 +117,15 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                             )
                         )
                 if key == "heatOfVaporizationAtNormalBoilingPoint":
+                    vle = pure_vle_at_p_feos(
+                        parameters=pcsaft_parameters[idx], pressure=101325.0
+                    )
                     _propvals.append(
-                        pure_h_lv_feos(
-                            pcsaft_parameters[idx],
-                            [298.15],
+                        (
+                            vle.vapor.molar_enthalpy(Contributions.Residual)
+                            - vle.liquid.molar_enthalpy(Contributions.Residual)
                         )
-                        * 1000.0
+                        / (si.JOULE / si.MOL)
                     )
                 if key == "liquidDensityAt25C":
                     _propvals.append(
@@ -130,7 +136,13 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                         1 / pure_den_feos(pcsaft_parameters[idx], [298.15, 101325.0])
                     )
                 if key == "normalBoilingPoint":
-                    _propvals.append(pure_vp_feos(pcsaft_parameters[idx], [298.15]))
+                    _propvals.append(
+                        PhaseEquilibrium.boiling_temperature(
+                            pc_saft(parameters=pcsaft_parameters[idx]),
+                            101325.0 * si.PASCAL,
+                        )[0]
+                        / si.KELVIN
+                    )
                 if key not in _CONST_PROPS:
                     self.raise_cape_error(
                         error_cls=ecape_errors.ECapeThrmPropertyNotAvailable,
