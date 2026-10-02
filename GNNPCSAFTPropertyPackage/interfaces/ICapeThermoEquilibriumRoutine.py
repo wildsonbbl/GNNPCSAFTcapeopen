@@ -425,7 +425,10 @@ class ICapeThermoEquilibriumRoutine(
                 return phasefraction  # at or beyond the beta = 0 boundary
             if (x - x_beta1) * direction >= 0.0:
                 return phasefraction - 1.0  # at or beyond the beta = 1 boundary
-            beta = beta_of(x)
+            try:
+                beta = beta_of(x)
+            except RuntimeError:
+                beta = 0.0
             # clip: single-phase results from the flash are beta = 0 or 1
             return phasefraction - min(1.0, max(0.0, beta))
 
