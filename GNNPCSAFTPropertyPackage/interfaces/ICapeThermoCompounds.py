@@ -30,6 +30,7 @@ _CONST_PROPS = [
     "criticalTemperature",
     "heatOfVaporizationAtNormalBoilingPoint",
     "liquidDensityAt25C",
+    "liquidVolumeAt25C",
     "normalBoilingPoint",
 ]
 
@@ -123,6 +124,10 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                 if key == "liquidDensityAt25C":
                     _propvals.append(
                         pure_den_feos(pcsaft_parameters[idx], [298.15, 101325.0])
+                    )
+                if key == "liquidVolumeAt25C":
+                    _propvals.append(
+                        1 / pure_den_feos(pcsaft_parameters[idx], [298.15, 101325.0])
                     )
                 if key == "normalBoilingPoint":
                     _propvals.append(pure_vp_feos(pcsaft_parameters[idx], [298.15]))
