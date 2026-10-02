@@ -78,17 +78,7 @@ class ICapeThermoEquilibriumRoutine(
         assert pcsaft_parameters is not None
         assert kij_matrix is not None
 
-        if not self.CheckEquilibriumSpec(specification1, specification2, solutionType):
-            self.raise_cape_error(
-                error_cls=ecape_errors.ECapeLimitedImpl,
-                description="Only TP, Tphasefraction, Pphasefraction"
-                " flash specification is"
-                " implemented by this Property Package."
-                f" Specifications {(specification1, specification2, solutionType)}"
-                " not supported",
-                interfaceName="ICapeThermoEquilibriumRoutine",
-                operation="CalcEquilibrium",
-            )
+        self.CheckEquilibriumSpec(specification1, specification2, solutionType)
 
         temperature = self._get_overall_scalar("temperature")
         pressure = self._get_overall_scalar("pressure")
@@ -185,10 +175,10 @@ class ICapeThermoEquilibriumRoutine(
         names = {str(spec1[0]).strip().lower(), str(spec2[0]).strip().lower()}
         basis = {str(spec1[1]).strip().lower(), str(spec2[1]).strip().lower()}
         phaselabels = {str(spec1[2]).strip().lower(), str(spec2[2]).strip().lower()}
-        return (
+        if (
             (
                 names
-                in (
+                not in (
                     {"temperature", "pressure"},
                     {"temperature", "phasefraction"},
                     {"pressure", "phasefraction"},
@@ -196,10 +186,20 @@ class ICapeThermoEquilibriumRoutine(
                     # {"pressure", "entropy"}, # needs ideal gas model
                 )
             )
-            and soltype in ("unspecified", "normal")
-            and basis in ({"none"}, {"none", "mole"})
-            and phaselabels in ({"overall", "vapor"}, {"overall"})
-        )
+            or soltype not in ("unspecified", "normal")
+            or basis not in ({"none"}, {"none", "mole"})
+            or phaselabels not in ({"overall", "vapor"}, {"overall"})
+        ):
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeLimitedImpl,
+                description="Only TP, Tphasefraction, Pphasefraction"
+                " flash specification is"
+                " implemented by this Property Package."
+                f" Specifications {(specification1, specification2, solutionType)}"
+                " not supported",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CalcEquilibrium",
+            )
 
     def _compute_bp_or_dp(self, prop, pcsaft_parameters, state, kij_matrix):
 
