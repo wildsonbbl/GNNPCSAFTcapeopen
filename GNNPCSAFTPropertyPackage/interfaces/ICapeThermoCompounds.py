@@ -145,9 +145,9 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                     )
                 if key not in _CONST_PROPS:
                     self.raise_cape_error(
-                        error_cls=ecape_errors.ECapeInvalidArgument,
+                        error_cls=ecape_errors.ECapeLimitedImpl,
                         description=(
-                            f"Requested compound constant ({key}) are not available;"
+                            f"Requested compound constant ({key}) is not available;"
                             f" only {_CONST_PROPS} are supported by this Property Package"
                         ),
                         interfaceName="ICapeThermoCompounds",
@@ -278,7 +278,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
             key = prop.strip()
             if key not in T_PROP_LIST:
                 self.raise_cape_error(
-                    error_cls=ecape_errors.ECapeInvalidArgument,
+                    error_cls=ecape_errors.ECapeLimitedImpl,
                     description=(
                         f"Requested temperature-dependent property ({key}) is not available;"
                         f" only {T_PROP_LIST} are supported by this Property Package"
