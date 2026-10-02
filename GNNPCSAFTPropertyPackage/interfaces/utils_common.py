@@ -374,7 +374,15 @@ class GNNPCSAFTPPbase(ECapeUser):
         return internal
 
     def _get_overall_scalar(self, prop, basis=None):
-        values = self.material.GetOverallProp(prop, basis)  # type: ignore
+        try:
+            values = self.material.GetOverallProp(prop, basis)  # type: ignore
+        except COMError as exc:
+            logging.exception(
+                "Exception caught in _get_overall_scalar for prop = %s",
+                prop,
+                exc_info=exc,
+            )
+            values = [300.0 if prop == "temperature" else 101325.0]
         values = self._as_list(values)
         return float(values[0])
 
