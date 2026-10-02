@@ -322,7 +322,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                     )
                     _propvals.append(st)
 
-                logging.debug("IN TDependetProperty ---> %r = %r", key, _propvals)
+                logging.debug("IN GetTDependentProperty ---> %r = %r", key, _propvals)
         return self.r8_array_variant(_propvals)
 
     def GetTDependentPropList(self):
