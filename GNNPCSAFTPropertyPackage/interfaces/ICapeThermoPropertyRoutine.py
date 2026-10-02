@@ -29,11 +29,18 @@ _SINGLE_PHASE_PROPS = (
     "enthalpy",
     "entropy",
     "compressibility",
+    "compressibilityFactor",
+    "Density",
+    "Enthalpy",
+    "Entropy",
 )
 _SINGLE_PHASE_PROPS_MOLE = (
     "density",
     "enthalpy",
     "entropy",
+    "Density",
+    "Enthalpy",
+    "Entropy",
 )
 _TWO_PHASE_PROPS = ("kvalue", "logkvalue")
 _PHASE_LABELS = ("Liquid", "Vapor")
@@ -380,7 +387,9 @@ class ICapeThermoPropertyRoutine(
         """
         return self.bstr_array_variant(list(_TWO_PHASE_PROPS))
 
-    def _compute_single_phase_property(self, prop, state, phaseLabel) -> List[float]:
+    def _compute_single_phase_property(
+        self, prop: str, state: List[float], phaseLabel: str
+    ) -> List[float]:
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
         _kij_matrix = copy.copy(self._kij_matrix)
         assert pcsaft_parameters is not None
@@ -394,7 +403,7 @@ class ICapeThermoPropertyRoutine(
                     parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
                 )
             ).tolist()
-        if prop == "density":
+        if prop.lower() == "density":
             return [
                 mix_den_feos(
                     parameters=pcsaft_parameters,
@@ -412,7 +421,7 @@ class ICapeThermoPropertyRoutine(
                     for frac, params in zip(state[2:], pcsaft_parameters)
                 )
             ]
-        if prop == "enthalpy":
+        if prop.lower() == "enthalpy":
             return [
                 mix_r_enthalpy_feos(
                     parameters=pcsaft_parameters,
@@ -421,7 +430,7 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=phaseLabel.lower(),
                 )
             ]
-        if prop == "entropy":
+        if prop.lower() == "entropy":
             return [
                 mix_r_entropy_feos(
                     parameters=pcsaft_parameters,
@@ -430,7 +439,7 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=phaseLabel.lower(),
                 )
             ]
-        if prop == "compressibility":
+        if prop.lower() == "compressibility":
             state_npt = state_npt_feos(
                 parameters=pcsaft_parameters,
                 state=state,
@@ -438,6 +447,14 @@ class ICapeThermoPropertyRoutine(
                 density_initialization=phaseLabel.lower(),
             )
             return [state_npt.isothermal_compressibility() / (1 / si.PASCAL)]
+        if prop == "compressibilityFactor":
+            state_npt = state_npt_feos(
+                parameters=pcsaft_parameters,
+                state=state,
+                kij_matrix=_kij_matrix,
+                density_initialization=phaseLabel.lower(),
+            )
+            return [state_npt.compressibility()]
 
         return [float("nan")]
 
