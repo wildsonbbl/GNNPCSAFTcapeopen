@@ -109,11 +109,13 @@ class ICapeThermoEquilibriumRoutine(
             state = [temperature, pressure, entropy, *fractions]
 
         logging.debug("IN CalcEquilibrium ---> state = %s", state)
+        spec_names = {str(spec1[0]).strip().lower(), str(spec2[0]).strip().lower()}
+        logging.debug("IN CalcEquilibrium ---> spec_names = %s", spec_names)
 
-        if spec1[0].lower() == "temperature" and spec2[0].lower() == "pressure":
+        if spec_names == {"temperature", "pressure"}:
+
             return self._tp_equilibrium_logic(
-                spec1=spec1,
-                spec2=spec2,
+                spec_names=spec_names,
                 pcsaft_parameters=pcsaft_parameters,
                 kij_matrix=kij_matrix,
                 temperature=temperature,
@@ -121,10 +123,9 @@ class ICapeThermoEquilibriumRoutine(
                 fractions=fractions,
                 material=material,
             )
-        if spec1[0].lower() == "temperature" and spec2[0].lower() == "phasefraction":
+        if spec_names == {"temperature", "phasefraction"}:
             return self._tphasefraction_equilibrium_logic(
-                spec1=spec1,
-                spec2=spec2,
+                spec_names=spec_names,
                 pcsaft_parameters=pcsaft_parameters,
                 kij_matrix=kij_matrix,
                 overall_temperature=temperature,
@@ -132,10 +133,9 @@ class ICapeThermoEquilibriumRoutine(
                 overall_fractions=fractions,
                 material=material,
             )
-        if spec1[0].lower() == "pressure" and spec2[0].lower() == "phasefraction":
+        if spec_names == {"pressure", "phasefraction"}:
             return self._pphasefraction_equilibrium_logic(
-                spec1=spec1,
-                spec2=spec2,
+                spec_names=spec_names,
                 pcsaft_parameters=pcsaft_parameters,
                 kij_matrix=kij_matrix,
                 overall_temperature=temperature,
@@ -234,7 +234,7 @@ class ICapeThermoEquilibriumRoutine(
                 return [float("nan")]
         return [float("nan")]
 
-    def _get_flash(self, spec1_0: str, spec2_0: str):
+    def _get_flash(self, spec_names: set[str]):
         temperature = self._get_overall_scalar("temperature")
         pressure = self._get_overall_scalar("pressure")
         fractions = self._get_overall_fractions()
@@ -243,21 +243,28 @@ class ICapeThermoEquilibriumRoutine(
         kij_matrix = self._kij_matrix
         assert kij_matrix is not None
         state = [temperature, pressure, *fractions]
-        if spec1_0 in (
-            "temperature",
-            "pressure",
-        ) and spec2_0 in (
-            "pressure",
-            "phasefraction",
+        if spec_names in (
+            {
+                "temperature",
+                "pressure",
+            },
+            {
+                "pressure",
+                "phasefraction",
+            },
+            {
+                "temperature",
+                "phasefraction",
+            },
         ):
             return mix_tp_flash_feos(
                 parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
             )
-        if spec1_0 == "pressure" and spec2_0 == "enthalpy":
+        if spec_names == {"pressure", "enthalpy"}:
             return mix_ph_flash_feos(
                 parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
             )
-        if spec1_0 == "pressure" and spec2_0 == "entropy":
+        if spec_names == {"pressure", "entropy"}:
             return mix_ps_flash_feos(
                 parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
             )
@@ -557,8 +564,7 @@ class ICapeThermoEquilibriumRoutine(
 
     def _tp_equilibrium_logic(
         self,
-        spec1: List[str],
-        spec2: List[str],
+        spec_names: set[str],
         pcsaft_parameters: List[List[float]],
         kij_matrix: List[List[float]],
         temperature: float,
@@ -631,7 +637,7 @@ class ICapeThermoEquilibriumRoutine(
             ),
         )
         try:
-            flash = self._get_flash(spec1_0=spec1[0].lower(), spec2_0=spec2[0].lower())
+            flash = self._get_flash(spec_names=spec_names)
         except (ValueError, RuntimeError) as exc:
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeSolvingError,
@@ -653,8 +659,7 @@ class ICapeThermoEquilibriumRoutine(
 
     def _tphasefraction_equilibrium_logic(
         self,
-        spec1: List[str],
-        spec2: List[str],
+        spec_names: set[str],
         pcsaft_parameters: List[List[float]],
         kij_matrix: List[List[float]],
         overall_temperature: float,
@@ -757,9 +762,7 @@ class ICapeThermoEquilibriumRoutine(
             )
             material.SetOverallProp("Pressure", None, self.r8_array_variant([pressure]))
             try:
-                flash = self._get_flash(
-                    spec1_0=spec1[0].lower(), spec2_0=spec2[0].lower()
-                )
+                flash = self._get_flash(spec_names=spec_names)
             except (ValueError, RuntimeError) as exc:
                 self.raise_cape_error(
                     error_cls=ecape_errors.ECapeSolvingError,
@@ -781,8 +784,7 @@ class ICapeThermoEquilibriumRoutine(
 
     def _pphasefraction_equilibrium_logic(
         self,
-        spec1: List[str],
-        spec2: List[str],
+        spec_names: set[str],
         pcsaft_parameters: List[List[float]],
         kij_matrix: List[List[float]],
         overall_temperature: float,
@@ -884,9 +886,7 @@ class ICapeThermoEquilibriumRoutine(
                 "Temperature", None, self.r8_array_variant([temperature])
             )
             try:
-                flash = self._get_flash(
-                    spec1_0=spec1[0].lower(), spec2_0=spec2[0].lower()
-                )
+                flash = self._get_flash(spec_names=spec_names)
             except (ValueError, RuntimeError) as exc:
                 self.raise_cape_error(
                     error_cls=ecape_errors.ECapeSolvingError,
