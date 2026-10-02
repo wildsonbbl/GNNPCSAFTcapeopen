@@ -75,7 +75,9 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
         logging.debug("IN GetCompoundConstant ---> requesting %r", (props, compIds))
         indices = self._compound_indices(co_compIds)
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
+        components_smiles = copy.copy(self.components_smiles)
         assert pcsaft_parameters is not None
+        assert components_smiles is not None
         _propvals = []
         for prop in requested_props:
             key = prop.strip()
@@ -83,7 +85,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                 if key == "molecularWeight":
                     _propvals.append(pcsaft_parameters[idx][8])
                 if key == "SMILESformula":
-                    _propvals.append(co_compIds[idx])
+                    _propvals.append(components_smiles[idx])
                 if key in (
                     "criticalDensity",
                     "criticalVolume",
