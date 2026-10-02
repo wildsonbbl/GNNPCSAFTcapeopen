@@ -23,7 +23,9 @@ from .utils_common import GNNPCSAFTPPbase, OutboundVARIANT
 _CONST_PROPS = [
     "molecularWeight",
     "SMILESformula",
+    "criticalCompressibilityFactor",
     "criticalDensity",
+    "criticalVolume",
     "criticalPressure",
     "criticalTemperature",
     "heatOfVaporizationAtNormalBoilingPoint",
@@ -84,8 +86,10 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                     _propvals.append(co_compIds[idx])
                 if key in (
                     "criticalDensity",
+                    "criticalVolume",
                     "criticalPressure",
                     "criticalTemperature",
+                    "criticalCompressibilityFactor",
                 ):
                     tc, pc, dc = critical_points_feos(pcsaft_parameters[idx])
                     if key == "criticalDensity":
@@ -94,6 +98,18 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                         _propvals.append(pc)
                     if key == "criticalTemperature":
                         _propvals.append(tc)
+                    if key == "criticalVolume":
+                        _propvals.append(1 / dc)
+                    if key == "criticalCompressibilityFactor":
+                        _propvals.append(
+                            pc
+                            * (1 / dc)
+                            / (
+                                si.RGAS
+                                / ((si.PASCAL * si.METER**3) / (si.KELVIN * si.MOL))
+                                * tc
+                            )
+                        )
                 if key == "heatOfVaporizationAtNormalBoilingPoint":
                     _propvals.append(
                         pure_h_lv_feos(
