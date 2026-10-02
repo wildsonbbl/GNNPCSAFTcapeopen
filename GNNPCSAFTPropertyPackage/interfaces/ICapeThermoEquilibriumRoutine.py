@@ -472,7 +472,7 @@ class ICapeThermoEquilibriumRoutine(
                 x_beta1=t_dew,
                 phasefraction=phasefraction,
             )
-        except ValueError as exc:
+        except (ValueError, RuntimeError) as exc:
             return self.raise_cape_error(
                 error_cls=ecape_errors.ECapeSolvingError,
                 description="Failed to calculate from"
@@ -514,7 +514,7 @@ class ICapeThermoEquilibriumRoutine(
                 x_beta1=p_dew,
                 phasefraction=phasefraction,
             )
-        except ValueError as exc:
+        except (ValueError, RuntimeError) as exc:
             return self.raise_cape_error(
                 error_cls=ecape_errors.ECapeSolvingError,
                 description="Failed to calculate from"
