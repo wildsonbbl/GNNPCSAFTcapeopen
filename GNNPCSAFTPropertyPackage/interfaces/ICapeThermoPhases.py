@@ -18,7 +18,7 @@ class ICapeThermoPhases(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoPhases):
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown.
         """
-        return 2
+        return 3
 
     def GetPhaseInfo(self, phaseLabel, phaseAttribute):
         """
@@ -47,6 +47,14 @@ class ICapeThermoPhases(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoPhases):
                 "UserDescription": "Liquid phase",
                 "TypeOfSolid": "",
             },
+            "Liquid 2": {
+                "StateOfAggregation": "Liquid",
+                "KeyCompoundId": "",
+                "ExcludedCompoundId": "",
+                "DensityDescription": "Light",
+                "UserDescription": "Second Liquid phase in LLE",
+                "TypeOfSolid": "",
+            },
             "Vapor": {
                 "StateOfAggregation": "Vapor",
                 "KeyCompoundId": "",
@@ -73,8 +81,8 @@ class ICapeThermoPhases(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoPhases):
         """
 
         phaseLabels, stateOfAggregation, keyCompoundId = (
-            self.bstr_array_variant(["Liquid", "Vapor"]),
-            self.bstr_array_variant(["Liquid", "Vapor"]),
-            self.bstr_array_variant(["", ""]),
+            self.bstr_array_variant(["Liquid", "Vapor", "Liquid 2"]),
+            self.bstr_array_variant(["Liquid", "Vapor", "Liquid"]),
+            self.bstr_array_variant(["", "", ""]),
         )
         return phaseLabels, stateOfAggregation, keyCompoundId

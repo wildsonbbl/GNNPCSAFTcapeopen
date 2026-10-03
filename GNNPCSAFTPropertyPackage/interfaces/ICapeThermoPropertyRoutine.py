@@ -43,7 +43,7 @@ _SINGLE_PHASE_PROPS_MOLE = (
     "Entropy",
 )
 _TWO_PHASE_PROPS = ("kvalue", "logkvalue")
-_PHASE_LABELS = ("Liquid", "Vapor")
+_PHASE_LABELS = ("Liquid", "Vapor", "Liquid 2")
 
 # eCapeCalculationCode flags used by CalcAndGetLnPhi's fFlags argument
 CAPE_NO_CALCULATION = 0
@@ -368,6 +368,7 @@ class ICapeThermoPropertyRoutine(
         pcsaft_parameters = copy.deepcopy(self.pcsaft_parameters)
         _kij_matrix = copy.deepcopy(self._kij_matrix)
         assert pcsaft_parameters is not None
+        density_initialization = "vapor" if phaseLabel == "Vapor" else "liquid"
         logging.debug(
             "IN CalcSinglePhaseProp ---> requesting %r", (prop, state, phaseLabel)
         )
@@ -375,7 +376,10 @@ class ICapeThermoPropertyRoutine(
         if prop == "activityCoefficient":
             return np.exp(
                 mix_ln_activity_coefficient(
-                    parameters=pcsaft_parameters, state=state, kij_matrix=_kij_matrix
+                    parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=_kij_matrix,
+                    density_initialization=density_initialization,
                 )
             ).tolist()
         if prop.lower() == "density":
@@ -384,11 +388,16 @@ class ICapeThermoPropertyRoutine(
                     parameters=pcsaft_parameters,
                     state=state,
                     kij_matrix=_kij_matrix,
-                    density_initialization=phaseLabel.lower(),
+                    density_initialization=density_initialization,
                 )
             ]
         if prop == "logFugacityCoefficient":
-            return mix_ln_fugacity_coefficient(pcsaft_parameters, state, _kij_matrix)
+            return mix_ln_fugacity_coefficient(
+                pcsaft_parameters,
+                state,
+                _kij_matrix,
+                density_initialization=density_initialization,
+            )
         if prop == "molecularWeight":
             return [
                 sum(
@@ -402,7 +411,7 @@ class ICapeThermoPropertyRoutine(
                     parameters=pcsaft_parameters,
                     state=state,
                     kij_matrix=_kij_matrix,
-                    density_initialization=phaseLabel.lower(),
+                    density_initialization=density_initialization,
                 )
             ]
         if prop.lower() == "entropy":
@@ -411,7 +420,7 @@ class ICapeThermoPropertyRoutine(
                     parameters=pcsaft_parameters,
                     state=state,
                     kij_matrix=_kij_matrix,
-                    density_initialization=phaseLabel.lower(),
+                    density_initialization=density_initialization,
                 )
             ]
         if prop.lower() == "compressibility":
@@ -419,7 +428,7 @@ class ICapeThermoPropertyRoutine(
                 parameters=pcsaft_parameters,
                 state=state,
                 kij_matrix=_kij_matrix,
-                density_initialization=phaseLabel.lower(),
+                density_initialization=density_initialization,
             )
             return [state_npt.isothermal_compressibility() / (1 / si.PASCAL)]
         if prop == "compressibilityFactor":
@@ -427,7 +436,7 @@ class ICapeThermoPropertyRoutine(
                 parameters=pcsaft_parameters,
                 state=state,
                 kij_matrix=_kij_matrix,
-                density_initialization=phaseLabel.lower(),
+                density_initialization=density_initialization,
             )
             return [state_npt.compressibility()]
 
@@ -440,5 +449,5 @@ class ICapeThermoPropertyRoutine(
                 description=f"Unrecognised phase label: {phaseLabel!r}",
                 interfaceName="ICapeThermoPropertyRoutine",
                 operation="CalcSinglePhaseProp/CalcTwoPhaseProp/CalcAndGetLnPhi",
-                moreInfo="Only Liquid (1) OR Vapor (2) are valid",
+                moreInfo="Only Liquid (1) OR Vapor (2) OR Liquid 2 (3) are valid",
             )
