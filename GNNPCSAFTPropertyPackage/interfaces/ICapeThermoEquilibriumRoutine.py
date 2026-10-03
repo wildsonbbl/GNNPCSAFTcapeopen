@@ -259,39 +259,47 @@ class ICapeThermoEquilibriumRoutine(
         kij_matrix = self._kij_matrix
         assert kij_matrix is not None
         state = [temperature, pressure, *fractions]
-        if spec_names in (
-            {
-                "temperature",
-                "pressure",
-            },
-            {
-                "pressure",
-                "phasefraction",
-            },
-            {
-                "temperature",
-                "phasefraction",
-            },
-        ):
-            return mix_tp_flash_feos(
-                parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+        try:
+            if spec_names in (
+                {
+                    "temperature",
+                    "pressure",
+                },
+                {
+                    "pressure",
+                    "phasefraction",
+                },
+                {
+                    "temperature",
+                    "phasefraction",
+                },
+            ):
+                return mix_tp_flash_feos(
+                    parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+                )
+            if spec_names == {"pressure", "enthalpy"}:
+                return mix_ph_flash_feos(
+                    parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+                )
+            if spec_names == {"pressure", "entropy"}:
+                return mix_ps_flash_feos(
+                    parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+                )
+            return self.raise_cape_error(
+                error_cls=ecape_errors.ECapeLimitedImpl,
+                description="Only TP, Tphasefraction, Pphasefraction"
+                " flash specification is "
+                "implemented by this Property Package",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CalcEquilibrium",
             )
-        if spec_names == {"pressure", "enthalpy"}:
-            return mix_ph_flash_feos(
-                parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+        except RuntimeError as exc:
+            return self.raise_cape_error(
+                error_cls=ecape_errors.ECapeSolvingError,
+                description=f"Flash calculation failed: {exc}",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CalcEquilibrium",
             )
-        if spec_names == {"pressure", "entropy"}:
-            return mix_ps_flash_feos(
-                parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
-            )
-        return self.raise_cape_error(
-            error_cls=ecape_errors.ECapeLimitedImpl,
-            description="Only TP, Tphasefraction, Pphasefraction"
-            " flash specification is "
-            "implemented by this Property Package",
-            interfaceName="ICapeThermoEquilibriumRoutine",
-            operation="CalcEquilibrium",
-        )
 
     def _set_equilibrium_for_stable_phase(
         self,
