@@ -136,7 +136,7 @@ class ICapeThermoEquilibriumRoutine(
             f" Specifications {(specification1, specification2, solutionType)}"
             " not supported",
             interfaceName="ICapeThermoEquilibriumRoutine",
-            operation="CheckEquilibriumSpec",
+            operation="CalcEquilibrium",
         )
 
     def CheckEquilibriumSpec(
@@ -216,6 +216,7 @@ class ICapeThermoEquilibriumRoutine(
                 interfaceName="ICapeThermoEquilibriumRoutine",
                 operation="CheckEquilibriumSpec",
             )
+        return True
 
     def _compute_bp_or_dp(self, prop, pcsaft_parameters, state, kij_matrix):
 
