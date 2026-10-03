@@ -60,6 +60,7 @@ class ICapeThermoEquilibriumRoutine(
             ECapeLimitedImpl, ECapeInvalidArgument,
             ECapeFailedInitialisation, ECapeUnknown.
         """
+        self.CheckEquilibriumSpec(specification1, specification2, solutionType)
         spec1 = self._as_list(specification1.value)
         spec2 = self._as_list(specification2.value)
         logging.debug(
@@ -67,18 +68,12 @@ class ICapeThermoEquilibriumRoutine(
             " %r",
             (specification1, specification2, solutionType),
         )
-        self._require_material(
-            interfaceName="ICapeThermoEquilibriumRoutine",
-            operation="CalcEquilibrium",
-        )
         assert self.material is not None
         material = self.material
         pcsaft_parameters = copy.copy(self.pcsaft_parameters)
         kij_matrix = copy.copy(self._kij_matrix)
         assert pcsaft_parameters is not None
         assert kij_matrix is not None
-
-        self.CheckEquilibriumSpec(specification1, specification2, solutionType)
 
         temperature = self._get_overall_scalar("temperature")
         pressure = self._get_overall_scalar("pressure")
@@ -164,6 +159,10 @@ class ICapeThermoEquilibriumRoutine(
         spec1 = self._as_list(specification1.value)
         spec2 = self._as_list(specification2.value)
         soltype = str(solutionType).lower()
+        self._require_material(
+            interfaceName="ICapeThermoEquilibriumRoutine",
+            operation="CheckEquilibriumSpec",
+        )
         if not spec1 or not spec2:
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeInvalidArgument,
@@ -198,7 +197,7 @@ class ICapeThermoEquilibriumRoutine(
                 f" Specifications {(specification1, specification2, solutionType)}"
                 " not supported",
                 interfaceName="ICapeThermoEquilibriumRoutine",
-                operation="CalcEquilibrium",
+                operation="CheckEquilibriumSpec",
             )
 
     def _compute_bp_or_dp(self, prop, pcsaft_parameters, state, kij_matrix):
