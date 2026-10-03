@@ -171,6 +171,14 @@ class ICapeThermoEquilibriumRoutine(
                 operation="CheckEquilibriumSpec",
                 moreInfo="Both equilibrium specifications are required",
             )
+        if len(spec1) < 3 or len(spec2) < 3:
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeInvalidArgument,
+                description="Incorrect minimum number of specifications:"
+                f" len(spec1) == {len(spec1)} and len(spec2) == {len(spec1)}",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CheckEquilibriumSpec",
+            )
         names = {str(spec1[0]).strip().lower(), str(spec2[0]).strip().lower()}
         basis = {str(spec1[1]).strip().lower(), str(spec2[1]).strip().lower()}
         phaselabels = {str(spec1[2]).strip().lower(), str(spec2[2]).strip().lower()}
