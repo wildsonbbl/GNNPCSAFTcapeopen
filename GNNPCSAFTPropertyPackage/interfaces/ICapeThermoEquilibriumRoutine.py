@@ -128,7 +128,16 @@ class ICapeThermoEquilibriumRoutine(
                 overall_fractions=fractions,
                 material=material,
             )
-        return 1
+        return self.raise_cape_error(
+            error_cls=ecape_errors.ECapeLimitedImpl,
+            description="Only TP, Tphasefraction, Pphasefraction"
+            " flash specification is"
+            " implemented by this Property Package."
+            f" Specifications {(specification1, specification2, solutionType)}"
+            " not supported",
+            interfaceName="ICapeThermoEquilibriumRoutine",
+            operation="CheckEquilibriumSpec",
+        )
 
     def CheckEquilibriumSpec(
         self,
