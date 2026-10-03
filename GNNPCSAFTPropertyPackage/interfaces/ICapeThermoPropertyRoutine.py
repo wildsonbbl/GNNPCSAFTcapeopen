@@ -101,8 +101,8 @@ class ICapeThermoPropertyRoutine(
             interfaceName="ICapeThermoPropertyRoutine",
             operation="CalcAndGetLnPhi",
         )
-        pcsaft_parameters = copy.copy(self.pcsaft_parameters)
-        _kij_matrix = copy.copy(self._kij_matrix)
+        pcsaft_parameters = copy.deepcopy(self.pcsaft_parameters)
+        _kij_matrix = copy.deepcopy(self._kij_matrix)
         assert pcsaft_parameters is not None
 
         self._require_phase_label(phaseLabel)
@@ -224,8 +224,8 @@ class ICapeThermoPropertyRoutine(
         )
         assert self.material is not None
         material = self.material
-        pcsaft_parameters = copy.copy(self.pcsaft_parameters)
-        _kij_matrix = copy.copy(self._kij_matrix)
+        pcsaft_parameters = copy.deepcopy(self.pcsaft_parameters)
+        _kij_matrix = copy.deepcopy(self._kij_matrix)
         assert pcsaft_parameters is not None
         for prop in _co_properties:
             self.CheckTwoPhasePropSpec(property=prop, phaseLabels=phaseLabels)
@@ -365,8 +365,8 @@ class ICapeThermoPropertyRoutine(
     def _compute_single_phase_property(
         self, prop: str, state: List[float], phaseLabel: str
     ) -> List[float]:
-        pcsaft_parameters = copy.copy(self.pcsaft_parameters)
-        _kij_matrix = copy.copy(self._kij_matrix)
+        pcsaft_parameters = copy.deepcopy(self.pcsaft_parameters)
+        _kij_matrix = copy.deepcopy(self._kij_matrix)
         assert pcsaft_parameters is not None
         logging.debug(
             "IN CalcSinglePhaseProp ---> requesting %r", (prop, state, phaseLabel)

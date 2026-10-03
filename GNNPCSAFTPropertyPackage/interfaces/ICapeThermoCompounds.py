@@ -72,14 +72,14 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
             ECapeLimitedImpl, ECapeInvalidArgument, ECapeUnknown,
             ECapeBadInvOrder.
         """
-        co_props = copy.copy(props.value)
-        co_compIds = copy.copy(list(compIds.value))
+        co_props = copy.deepcopy(props.value)
+        co_compIds = copy.deepcopy(list(compIds.value))
 
         requested_props = [str(p) for p in self._as_list(co_props)]
         logging.debug("IN GetCompoundConstant ---> requesting %r", (props, compIds))
         indices = self._compound_indices(co_compIds)
-        pcsaft_parameters = copy.copy(self.pcsaft_parameters)
-        components_smiles = copy.copy(self.components_smiles)
+        pcsaft_parameters = copy.deepcopy(self.pcsaft_parameters)
+        components_smiles = copy.deepcopy(self.components_smiles)
         assert pcsaft_parameters is not None
         assert components_smiles is not None
         _propvals = []
@@ -170,7 +170,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
             interfaceName="ICapeThermoCompounds",
             operation="GetCompoundList",
         )
-        pcsaft_parameters = copy.copy(self.pcsaft_parameters)
+        pcsaft_parameters = copy.deepcopy(self.pcsaft_parameters)
         assert pcsaft_parameters is not None
         assert self.components_smiles is not None
 
@@ -266,12 +266,12 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
             ECapeInvalidArgument, ECapeOutOfBounds,
             ECapeThrmPropertyNotAvailable, ECapeUnknown, ECapeBadInvOrder.
         """
-        co_props = copy.copy(props.value)
-        co_compIds = copy.copy(compIds.value)
+        co_props = copy.deepcopy(props.value)
+        co_compIds = copy.deepcopy(compIds.value)
 
         requested_props = [str(p) for p in self._as_list(co_props)]
         indices = self._compound_indices(co_compIds)
-        pcsaft_parameters = copy.copy(self.pcsaft_parameters)
+        pcsaft_parameters = copy.deepcopy(self.pcsaft_parameters)
         assert pcsaft_parameters is not None
         _propvals: List[float] = []
         for prop in requested_props:

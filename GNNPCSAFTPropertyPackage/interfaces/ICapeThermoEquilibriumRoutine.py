@@ -70,8 +70,8 @@ class ICapeThermoEquilibriumRoutine(
         )
         assert self.material is not None
         material = self.material
-        pcsaft_parameters = copy.copy(self.pcsaft_parameters)
-        kij_matrix = copy.copy(self._kij_matrix)
+        pcsaft_parameters = copy.deepcopy(self.pcsaft_parameters)
+        kij_matrix = copy.deepcopy(self._kij_matrix)
         assert pcsaft_parameters is not None
         assert kij_matrix is not None
 
