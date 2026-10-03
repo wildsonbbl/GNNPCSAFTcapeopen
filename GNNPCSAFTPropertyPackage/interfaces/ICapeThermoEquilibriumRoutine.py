@@ -184,7 +184,7 @@ class ICapeThermoEquilibriumRoutine(
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeInvalidArgument,
                 description="Incorrect minimum number of specifications:"
-                f" len(spec1) == {len(spec1)} and len(spec2) == {len(spec1)}",
+                f" len(spec1) == {len(spec1)} and len(spec2) == {len(spec2)}",
                 interfaceName="ICapeThermoEquilibriumRoutine",
                 operation="CheckEquilibriumSpec",
             )
