@@ -86,12 +86,6 @@ class ICapeThermoEquilibriumRoutine(
                 operation="CalcEquilibrium",
             )
         state = [temperature, pressure, *fractions]
-        if spec2[0].lower() == "enthalpy":
-            enthalpy = self._get_overall_scalar("enthalpy", "Mole")
-            state = [temperature, pressure, enthalpy, *fractions]
-        if spec2[0].lower() == "entropy":
-            entropy = self._get_overall_scalar("entropy", "Mole")
-            state = [temperature, pressure, entropy, *fractions]
 
         logging.debug("IN CalcEquilibrium ---> state = %s", state)
         spec_names = {str(spec1[0]).strip().lower(), str(spec2[0]).strip().lower()}
@@ -279,10 +273,14 @@ class ICapeThermoEquilibriumRoutine(
                     parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
                 )
             if spec_names == {"pressure", "enthalpy"}:
+                enthalpy = self._get_overall_scalar("enthalpy", "Mole")
+                state = [temperature, pressure, enthalpy, *fractions]
                 return mix_ph_flash_feos(
                     parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
                 )
             if spec_names == {"pressure", "entropy"}:
+                entropy = self._get_overall_scalar("entropy", "Mole")
+                state = [temperature, pressure, entropy, *fractions]
                 return mix_ps_flash_feos(
                     parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
                 )
