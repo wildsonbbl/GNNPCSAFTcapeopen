@@ -212,38 +212,36 @@ class ICapeThermoEquilibriumRoutine(
             )
         return True
 
-    def _compute_bp_or_dp(self, prop, pcsaft_parameters, state, kij_matrix):
+    def _compute_bp_or_dp(self, prop, pcsaft_parameters, state, kij_matrix) -> float:
 
         if prop in ("dewPointPressure", "bubblePointPressure"):
             bp, dp = mix_vp_feos(
                 parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
             )
             if prop == "bubblePointPressure":
-                return [bp]
-            return [dp]
+                return bp
+            return dp
         if prop == "dewPointTemperature":
             try:
-                return [
-                    mix_dp_at_fixed_pressure_feos(
-                        parameters=pcsaft_parameters,
-                        state=state,
-                        kij_matrix=kij_matrix,
-                    )
-                ]
+                return mix_dp_at_fixed_pressure_feos(
+                    parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+
             except Exception:  # pylint:disable=broad-exception-caught
-                return [float("nan")]
+                return float("nan")
         if prop == "bubblePointTemperature":
             try:
-                return [
-                    mix_bp_at_fixed_pressure_feos(
-                        parameters=pcsaft_parameters,
-                        state=state,
-                        kij_matrix=kij_matrix,
-                    )
-                ]
+                return mix_bp_at_fixed_pressure_feos(
+                    parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+
             except Exception:  # pylint:disable=broad-exception-caught
-                return [float("nan")]
-        return [float("nan")]
+                return float("nan")
+        return float("nan")
 
     def _get_flash(self, spec_names: set[str]):
         temperature = self._get_overall_scalar("temperature")
@@ -667,9 +665,10 @@ class ICapeThermoEquilibriumRoutine(
             )
 
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, pressure)
+            material.SetOverallProp("Pressure", None, self.r8_array_variant([pressure]))
             self._set_equilibrium_for_stable_phase(
                 temperature=overall_temperature,
-                pressure=pressure[0],
+                pressure=pressure,
                 fractions_at_phase=overall_fractions,
                 phase_label="Vapor",
             )
@@ -691,9 +690,10 @@ class ICapeThermoEquilibriumRoutine(
                 kij_matrix=kij_matrix,
             )
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, pressure)
+            material.SetOverallProp("Pressure", None, self.r8_array_variant([pressure]))
             self._set_equilibrium_for_stable_phase(
                 temperature=overall_temperature,
-                pressure=pressure[0],
+                pressure=pressure,
                 fractions_at_phase=overall_fractions,
                 phase_label="Liquid",
             )
@@ -771,8 +771,11 @@ class ICapeThermoEquilibriumRoutine(
                 kij_matrix=kij_matrix,
             )
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, temperature)
+            material.SetOverallProp(
+                "Temperature", None, self.r8_array_variant([temperature])
+            )
             self._set_equilibrium_for_stable_phase(
-                temperature=temperature[0],
+                temperature=temperature,
                 pressure=overall_pressure,
                 fractions_at_phase=overall_fractions,
                 phase_label="Vapor",
@@ -794,8 +797,11 @@ class ICapeThermoEquilibriumRoutine(
                 kij_matrix=kij_matrix,
             )
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, temperature)
+            material.SetOverallProp(
+                "Temperature", None, self.r8_array_variant([temperature])
+            )
             self._set_equilibrium_for_stable_phase(
-                temperature=temperature[0],
+                temperature=temperature,
                 pressure=overall_pressure,
                 fractions_at_phase=overall_fractions,
                 phase_label="Liquid",
