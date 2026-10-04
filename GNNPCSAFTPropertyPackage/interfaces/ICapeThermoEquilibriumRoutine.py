@@ -334,58 +334,6 @@ class ICapeThermoEquilibriumRoutine(
             self.r8_array_variant([1.0]),
         )
 
-        phase_label2 = "Liquid" if phase_label == "Vapor" else "Vapor"
-
-        material.SetSinglePhaseProp(
-            "temperature",
-            phase_label2,
-            None,
-            self.r8_array_variant([temperature]),
-        )
-        material.SetSinglePhaseProp(
-            "pressure",
-            phase_label2,
-            None,
-            self.r8_array_variant([pressure]),
-        )
-        material.SetSinglePhaseProp(
-            "fraction",
-            phase_label2,
-            "Mole",
-            self.r8_array_variant([0.0] * len(fractions_at_phase)),
-        )
-        material.SetSinglePhaseProp(
-            "phaseFraction",
-            phase_label2,
-            "Mole",
-            self.r8_array_variant([0.0]),
-        )
-
-        material.SetSinglePhaseProp(
-            "temperature",
-            "Liquid 2",
-            None,
-            self.r8_array_variant([temperature]),
-        )
-        material.SetSinglePhaseProp(
-            "pressure",
-            "Liquid 2",
-            None,
-            self.r8_array_variant([pressure]),
-        )
-        material.SetSinglePhaseProp(
-            "fraction",
-            "Liquid 2",
-            "Mole",
-            self.r8_array_variant([0.0] * len(fractions_at_phase)),
-        )
-        material.SetSinglePhaseProp(
-            "phaseFraction",
-            "Liquid 2",
-            "Mole",
-            self.r8_array_variant([0.0]),
-        )
-
         rss_mb = self.rss_mb()
         logging.debug("PROCESS MEMORY: %r MB", rss_mb)
 
@@ -409,7 +357,6 @@ class ICapeThermoEquilibriumRoutine(
         assert material is not None
 
         phaselabel2 = "Liquid 2" if _is_liquid_like(flash.vapor) else "Vapor"
-        phaselabel3 = "Vapor" if _is_liquid_like(flash.vapor) else "Liquid 2"
 
         logging.debug(
             "IN CalcEquilibrium ---> [liquid_fractions, vapor/liquid2_fractions] == %s",
@@ -428,12 +375,6 @@ class ICapeThermoEquilibriumRoutine(
         )
         material.SetSinglePhaseProp(
             "temperature",
-            phaselabel3,
-            None,
-            self.r8_array_variant([vapor_temperature]),
-        )
-        material.SetSinglePhaseProp(
-            "temperature",
             "Liquid",
             None,
             self.r8_array_variant([liquid_temperature]),
@@ -441,12 +382,6 @@ class ICapeThermoEquilibriumRoutine(
         material.SetSinglePhaseProp(
             "pressure",
             phaselabel2,
-            None,
-            self.r8_array_variant([vapor_pressure]),
-        )
-        material.SetSinglePhaseProp(
-            "pressure",
-            phaselabel3,
             None,
             self.r8_array_variant([vapor_pressure]),
         )
@@ -464,12 +399,6 @@ class ICapeThermoEquilibriumRoutine(
         )
         material.SetSinglePhaseProp(
             "fraction",
-            phaselabel3,
-            "Mole",
-            self.r8_array_variant([0.0] * len(vapor_fractions)),
-        )
-        material.SetSinglePhaseProp(
-            "fraction",
             "Liquid",
             "Mole",
             self.r8_array_variant(liquid_fractions),
@@ -479,12 +408,6 @@ class ICapeThermoEquilibriumRoutine(
             phaselabel2,
             "Mole",
             self.r8_array_variant([vapor_beta]),
-        )
-        material.SetSinglePhaseProp(
-            "phaseFraction",
-            phaselabel3,
-            "Mole",
-            self.r8_array_variant([0.0]),
         )
         material.SetSinglePhaseProp(
             "phaseFraction",
@@ -665,14 +588,8 @@ class ICapeThermoEquilibriumRoutine(
                 stable_phase_label = "Vapor"
 
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                    ]
-                ),
+                self.bstr_array_variant([stable_phase_label]),
+                self.i4_array_variant([CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS]),
             )
             self._set_equilibrium_for_stable_phase(
                 temperature=temperature,
@@ -681,14 +598,8 @@ class ICapeThermoEquilibriumRoutine(
                 phase_label=stable_phase_label,
             )
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                    ]
-                ),
+                self.bstr_array_variant([stable_phase_label]),
+                self.i4_array_variant([CAPEOPEN110.CAPE_ATEQUILIBRIUM]),
             )
             return 0
 
@@ -714,10 +625,11 @@ class ICapeThermoEquilibriumRoutine(
             )
         self._set_equilibrium_from_flash(flash=flash)
         material.SetPresentPhases(
-            self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
+            self.bstr_array_variant(
+                ["Liquid 2" if _is_liquid_like(flash.vapor) else "Vapor", "Liquid"]
+            ),
             self.i4_array_variant(
                 [
-                    CAPEOPEN110.CAPE_ATEQUILIBRIUM,
                     CAPEOPEN110.CAPE_ATEQUILIBRIUM,
                     CAPEOPEN110.CAPE_ATEQUILIBRIUM,
                 ]
@@ -743,14 +655,8 @@ class ICapeThermoEquilibriumRoutine(
         logging.debug("IN CalcEquilibrium ---> phaseFraction = %r", phaseFraction)
         if phaseFraction == 1.0:
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                    ]
-                ),
+                self.bstr_array_variant(["Vapor"]),
+                self.i4_array_variant([CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS]),
             )
             prop = "dewPointPressure"
             pressure = self._compute_bp_or_dp(
@@ -768,26 +674,14 @@ class ICapeThermoEquilibriumRoutine(
                 phase_label="Vapor",
             )
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                    ]
-                ),
+                self.bstr_array_variant(["Vapor"]),
+                self.i4_array_variant([CAPEOPEN110.CAPE_ATEQUILIBRIUM]),
             )
 
         if phaseFraction == 0.0:
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                    ]
-                ),
+                self.bstr_array_variant(["Liquid"]),
+                self.i4_array_variant([CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS]),
             )
             prop = "bubblePointPressure"
             pressure = self._compute_bp_or_dp(
@@ -804,21 +698,14 @@ class ICapeThermoEquilibriumRoutine(
                 phase_label="Liquid",
             )
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                    ]
-                ),
+                self.bstr_array_variant(["Liquid"]),
+                self.i4_array_variant([CAPEOPEN110.CAPE_ATEQUILIBRIUM]),
             )
         if 0.0 < phaseFraction < 1.0:
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
+                self.bstr_array_variant(["Vapor", "Liquid"]),
                 self.i4_array_variant(
                     [
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
                         CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
                         CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
                     ]
@@ -845,10 +732,9 @@ class ICapeThermoEquilibriumRoutine(
                 )
             self._set_equilibrium_from_flash(flash=flash)
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
+                self.bstr_array_variant(["Vapor", "Liquid"]),
                 self.i4_array_variant(
                     [
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
                         CAPEOPEN110.CAPE_ATEQUILIBRIUM,
                         CAPEOPEN110.CAPE_ATEQUILIBRIUM,
                     ]
@@ -873,14 +759,8 @@ class ICapeThermoEquilibriumRoutine(
         logging.debug("IN CalcEquilibrium ---> phaseFraction = %r", phaseFraction)
         if phaseFraction == 1.0:
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                    ]
-                ),
+                self.bstr_array_variant(["Vapor"]),
+                self.i4_array_variant([CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS]),
             )
             prop = "dewPointTemperature"
             temperature = self._compute_bp_or_dp(
@@ -897,25 +777,13 @@ class ICapeThermoEquilibriumRoutine(
                 phase_label="Vapor",
             )
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                    ]
-                ),
+                self.bstr_array_variant(["Vapor"]),
+                self.i4_array_variant([CAPEOPEN110.CAPE_ATEQUILIBRIUM]),
             )
         if phaseFraction == 0.0:
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
-                    ]
-                ),
+                self.bstr_array_variant(["Liquid"]),
+                self.i4_array_variant([CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS]),
             )
             prop = "bubblePointTemperature"
             temperature = self._compute_bp_or_dp(
@@ -932,21 +800,14 @@ class ICapeThermoEquilibriumRoutine(
                 phase_label="Liquid",
             )
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                    ]
-                ),
+                self.bstr_array_variant(["Liquid"]),
+                self.i4_array_variant([CAPEOPEN110.CAPE_ATEQUILIBRIUM]),
             )
         if 0.0 < phaseFraction < 1.0:
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
+                self.bstr_array_variant(["Vapor", "Liquid"]),
                 self.i4_array_variant(
                     [
-                        CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
                         CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
                         CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS,
                     ]
@@ -975,10 +836,9 @@ class ICapeThermoEquilibriumRoutine(
                 )
             self._set_equilibrium_from_flash(flash=flash)
             material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid", "Liquid 2"]),
+                self.bstr_array_variant(["Vapor", "Liquid"]),
                 self.i4_array_variant(
                     [
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
                         CAPEOPEN110.CAPE_ATEQUILIBRIUM,
                         CAPEOPEN110.CAPE_ATEQUILIBRIUM,
                     ]
