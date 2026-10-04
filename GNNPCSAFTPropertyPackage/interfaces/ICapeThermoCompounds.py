@@ -85,74 +85,21 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
         _propvals = []
         for prop in requested_props:
             key = prop.strip()
+            if key not in _CONST_PROPS:
+                self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeLimitedImpl,
+                    description=(
+                        f"Requested compound constant ({key}) is not available;"
+                        f" only {_CONST_PROPS} are supported by this Property Package"
+                    ),
+                    interfaceName="ICapeThermoCompounds",
+                    operation="GetCompoundConstant",
+                )
             for idx in indices:
-                if key == "molecularWeight":
-                    _propvals.append(pcsaft_parameters[idx][8])
-                if key == "SMILESformula":
-                    _propvals.append(components_smiles[idx])
-                if key in (
-                    "criticalDensity",
-                    "criticalVolume",
-                    "criticalPressure",
-                    "criticalTemperature",
-                    "criticalCompressibilityFactor",
-                ):
-                    tc, pc, dc = critical_points_feos(pcsaft_parameters[idx])
-                    if key == "criticalDensity":
-                        _propvals.append(dc)
-                    if key == "criticalPressure":
-                        _propvals.append(pc)
-                    if key == "criticalTemperature":
-                        _propvals.append(tc)
-                    if key == "criticalVolume":
-                        _propvals.append(1 / dc)
-                    if key == "criticalCompressibilityFactor":
-                        _propvals.append(
-                            pc
-                            * (1 / dc)
-                            / (
-                                si.RGAS
-                                / ((si.PASCAL * si.METER**3) / (si.KELVIN * si.MOL))
-                                * tc
-                            )
-                        )
-                if key == "heatOfVaporizationAtNormalBoilingPoint":
-                    vle = pure_vle_at_p_feos(
-                        parameters=pcsaft_parameters[idx], pressure=101325.0
-                    )
-                    _propvals.append(
-                        (
-                            vle.vapor.molar_enthalpy(Contributions.Residual)
-                            - vle.liquid.molar_enthalpy(Contributions.Residual)
-                        )
-                        / (si.JOULE / si.MOL)
-                    )
-                if key == "liquidDensityAt25C":
-                    _propvals.append(
-                        pure_den_feos(pcsaft_parameters[idx], [298.15, 101325.0])
-                    )
-                if key == "liquidVolumeAt25C":
-                    _propvals.append(
-                        1 / pure_den_feos(pcsaft_parameters[idx], [298.15, 101325.0])
-                    )
-                if key == "normalBoilingPoint":
-                    _propvals.append(
-                        PhaseEquilibrium.boiling_temperature(
-                            pc_saft(parameters=pcsaft_parameters[idx]),
-                            101325.0 * si.PASCAL,
-                        )[0]
-                        / si.KELVIN
-                    )
-                if key not in _CONST_PROPS:
-                    self.raise_cape_error(
-                        error_cls=ecape_errors.ECapeLimitedImpl,
-                        description=(
-                            f"Requested compound constant ({key}) is not available;"
-                            f" only {_CONST_PROPS} are supported by this Property Package"
-                        ),
-                        interfaceName="ICapeThermoCompounds",
-                        operation="GetCompoundConstant",
-                    )
+                val = self._get_compound_constant_value(
+                    key, idx, pcsaft_parameters, components_smiles
+                )
+                _propvals.append(val)
                 logging.debug("IN GetCompoundConstant ---> %r = %r", key, _propvals)
         return OutboundVARIANT(_propvals)
 
@@ -364,3 +311,63 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                     operation="GetTDependentPropList",
                 )
         return indices
+
+    def _get_critical_property(self, key, parameter):
+        """Helper to compute critical properties."""
+        tc, pc, dc = critical_points_feos(parameter)
+        if key == "criticalDensity":
+            return dc
+        if key == "criticalPressure":
+            return pc
+        if key == "criticalTemperature":
+            return tc
+        if key == "criticalVolume":
+            return 1 / dc
+        if key == "criticalCompressibilityFactor":
+            return (
+                pc
+                * (1 / dc)
+                / (si.RGAS / ((si.PASCAL * si.METER**3) / (si.KELVIN * si.MOL)) * tc)
+            )
+        return None
+
+    def _get_compound_constant_value(
+        self, key, idx, pcsaft_parameters, components_smiles
+    ):
+        """
+        Helper to get a single compound constant value to reduce branch
+        complexity in GetCompoundConstant.
+        """
+        if key == "molecularWeight":
+            return pcsaft_parameters[idx][8]
+        if key == "SMILESformula":
+            return components_smiles[idx]
+        if key in (
+            "criticalDensity",
+            "criticalVolume",
+            "criticalPressure",
+            "criticalTemperature",
+            "criticalCompressibilityFactor",
+        ):
+            return self._get_critical_property(key, pcsaft_parameters[idx])
+        if key == "heatOfVaporizationAtNormalBoilingPoint":
+            vle = pure_vle_at_p_feos(
+                parameters=pcsaft_parameters[idx], pressure=101325.0
+            )
+            return (
+                vle.vapor.molar_enthalpy(Contributions.Residual)
+                - vle.liquid.molar_enthalpy(Contributions.Residual)
+            ) / (si.JOULE / si.MOL)
+        if key == "liquidDensityAt25C":
+            return pure_den_feos(pcsaft_parameters[idx], [298.15, 101325.0])
+        if key == "liquidVolumeAt25C":
+            return 1 / pure_den_feos(pcsaft_parameters[idx], [298.15, 101325.0])
+        if key == "normalBoilingPoint":
+            return (
+                PhaseEquilibrium.boiling_temperature(
+                    pc_saft(parameters=pcsaft_parameters[idx]),
+                    101325.0 * si.PASCAL,
+                )[0]
+                / si.KELVIN
+            )
+        return None
