@@ -720,6 +720,7 @@ class ICapeThermoEquilibriumRoutine(
                 kij_matrix=kij_matrix,
                 phasefraction=phaseFraction,
             )
+            logging.debug("IN CalcEquilibrium ---> Overall Pressure = %r", pressure)
             material.SetOverallProp("Pressure", None, self.r8_array_variant([pressure]))
             try:
                 flash = self._get_flash(spec_names=spec_names)
@@ -821,6 +822,9 @@ class ICapeThermoEquilibriumRoutine(
                 pcsaft_parameters=pcsaft_parameters,
                 kij_matrix=kij_matrix,
                 phasefraction=phaseFraction,
+            )
+            logging.debug(
+                "IN CalcEquilibrium ---> Overall Temperature = %r", temperature
             )
             material.SetOverallProp(
                 "Temperature", None, self.r8_array_variant([temperature])
