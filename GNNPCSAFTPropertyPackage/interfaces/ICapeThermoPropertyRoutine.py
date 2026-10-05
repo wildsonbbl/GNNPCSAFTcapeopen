@@ -163,7 +163,7 @@ class ICapeThermoPropertyRoutine(
                 self.raise_cape_error(
                     error_cls=ecape_errors.ECapeLimitedImpl,
                     description="Unsupported single-phase"
-                    f" property ---> {property} <---"
+                    f" property ---> {prop} <---"
                     f" with phaseLable ---> {phaseLabel} <---",
                     interfaceName="ICapeThermoPropertyRoutine",
                     operation="CalcSinglePhaseProp",
@@ -246,7 +246,7 @@ class ICapeThermoPropertyRoutine(
                 self.raise_cape_error(
                     error_cls=ecape_errors.ECapeLimitedImpl,
                     description=f"Unsupported two-phase"
-                    f" property ---> {property} <---"
+                    f" property ---> {prop} <---"
                     f" with phaseLables ---> {_co_phase_labels} <---",
                     interfaceName="ICapeThermoPropertyRoutine",
                     operation="CalcTwoPhaseProp",
