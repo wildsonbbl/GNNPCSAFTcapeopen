@@ -1,5 +1,5 @@
 {
-  "include": ["interfaces", "gnnpcsaft_cape_open.py"],
+  "include": ["GNNPCSAFTPropertyPackage/interfaces", "main.py"],
   "exclude": [
     "**/.venv",
     "**/node_modules",
