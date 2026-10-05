@@ -81,7 +81,8 @@ class ICapeThermoEquilibriumRoutine(
         if 0.0 in fractions:
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeFailedInitialisation,
-                description=f"Overall fractions wrongly set to {fractions}",
+                description=f"Overall fractions wrongly set to {fractions}."
+                " All components should have at least a residual molar fraction (e.g., 1E-10)",
                 interfaceName="ICapeThermoEquilibriumRoutine",
                 operation="CalcEquilibrium",
             )
