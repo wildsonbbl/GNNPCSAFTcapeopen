@@ -7,10 +7,12 @@ from typing import List
 import numpy as np
 import si_units as si
 from comtypes.gen import CAPEOPEN110
+from feos import Contributions  # pyright: ignore[reportAttributeAccessIssue]
 from gnnepcsaft.pcsaft.feos.mixture import (
     mix_den_feos,
     mix_r_enthalpy_feos,
     mix_r_entropy_feos,
+    mix_r_isobaric_heat_capacity_feos,
     state_npt_feos,
 )
 from gnnepcsaft.pcsaft.pcsaft_feos import (
@@ -33,6 +35,8 @@ _SINGLE_PHASE_PROPS = (
     "Density",
     "Enthalpy",
     "Entropy",
+    "heatCapacityCp",
+    "heatCapacityCv",
 )
 _SINGLE_PHASE_PROPS_MOLE = (
     "density",
@@ -41,6 +45,8 @@ _SINGLE_PHASE_PROPS_MOLE = (
     "Density",
     "Enthalpy",
     "Entropy",
+    "heatCapacityCp",
+    "heatCapacityCv",
 )
 _TWO_PHASE_PROPS = ("kvalue", "logkvalue")
 _PHASE_LABELS = ("Liquid", "Vapor", "Liquid 2")
@@ -413,6 +419,26 @@ class ICapeThermoPropertyRoutine(
                     kij_matrix=_kij_matrix,
                     density_initialization=density_initialization,
                 )
+            ]
+        if prop == "heatCapacityCp":
+            return [
+                mix_r_isobaric_heat_capacity_feos(
+                    parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=_kij_matrix,
+                    density_initialization=density_initialization,
+                )
+            ]
+        if prop == "heatCapacityCv":
+            state_npt = state_npt_feos(
+                parameters=pcsaft_parameters,
+                state=state,
+                kij_matrix=_kij_matrix,
+                density_initialization=density_initialization,
+            )
+            return [
+                state_npt.molar_isochoric_heat_capacity(Contributions.Residual)
+                / (si.JOULE / si.MOL / si.KELVIN)
             ]
         if prop.lower() == "entropy":
             return [
