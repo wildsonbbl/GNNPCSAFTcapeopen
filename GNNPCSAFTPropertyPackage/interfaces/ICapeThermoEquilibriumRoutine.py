@@ -233,8 +233,13 @@ class ICapeThermoEquilibriumRoutine(
                     kij_matrix=kij_matrix,
                 )
 
-            except Exception:  # pylint:disable=broad-exception-caught
-                return float("nan")
+            except Exception as exc:  # pylint:disable=broad-exception-caught
+                return self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description=f"BP/DP calculation failed: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                )
         if prop == "bubblePointTemperature":
             try:
                 return mix_bp_at_fixed_pressure_feos(
@@ -243,9 +248,19 @@ class ICapeThermoEquilibriumRoutine(
                     kij_matrix=kij_matrix,
                 )
 
-            except Exception:  # pylint:disable=broad-exception-caught
-                return float("nan")
-        return float("nan")
+            except Exception as exc:  # pylint:disable=broad-exception-caught
+                return self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description=f"BP/DP calculation failed: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                )
+        return self.raise_cape_error(
+            error_cls=ecape_errors.ECapeInvalidArgument,
+            description=f"Invalid prop = {prop} in _compute_bp_or_dp",
+            interfaceName="ICapeThermoEquilibriumRoutine",
+            operation="CalcEquilibrium",
+        )
 
     def _get_flash(self, spec_names: set[str]):
         temperature = self._get_overall_scalar("temperature")
