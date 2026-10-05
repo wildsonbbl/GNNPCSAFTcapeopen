@@ -219,9 +219,18 @@ class ICapeThermoEquilibriumRoutine(
     def _compute_bp_or_dp(self, prop, pcsaft_parameters, state, kij_matrix) -> float:
 
         if prop in ("dewPointPressure", "bubblePointPressure"):
-            bp, dp = mix_vp_feos(
-                parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
-            )
+            try:
+                bp, dp = mix_vp_feos(
+                    parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+                )
+            except RuntimeError as exc:
+                return self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description=f"BP/DP calculation failed: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                )
+
             if prop == "bubblePointPressure":
                 return bp
             return dp
@@ -233,7 +242,7 @@ class ICapeThermoEquilibriumRoutine(
                     kij_matrix=kij_matrix,
                 )
 
-            except Exception as exc:  # pylint:disable=broad-exception-caught
+            except RuntimeError as exc:
                 return self.raise_cape_error(
                     error_cls=ecape_errors.ECapeSolvingError,
                     description=f"BP/DP calculation failed: {exc}",
@@ -248,7 +257,7 @@ class ICapeThermoEquilibriumRoutine(
                     kij_matrix=kij_matrix,
                 )
 
-            except Exception as exc:  # pylint:disable=broad-exception-caught
+            except RuntimeError as exc:
                 return self.raise_cape_error(
                     error_cls=ecape_errors.ECapeSolvingError,
                     description=f"BP/DP calculation failed: {exc}",
