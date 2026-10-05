@@ -159,7 +159,15 @@ class ICapeThermoPropertyRoutine(
         """
         _co_properties = self._as_list(props.value)
         for prop in _co_properties:
-            self.CheckSinglePhasePropSpec(property=prop, phaseLabel=phaseLabel)
+            if not self.CheckSinglePhasePropSpec(property=prop, phaseLabel=phaseLabel):
+                self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeLimitedImpl,
+                    description="Unsupported single-phase"
+                    f" property ---> {property} <---"
+                    f" with phaseLable ---> {phaseLabel} <---",
+                    interfaceName="ICapeThermoPropertyRoutine",
+                    operation="CalcSinglePhaseProp",
+                )
         self._require_material(
             interfaceName="ICapeThermoPropertyRoutine",
             operation="CalcSinglePhaseProp",
@@ -234,7 +242,15 @@ class ICapeThermoPropertyRoutine(
         _kij_matrix = copy.deepcopy(self._kij_matrix)
         assert pcsaft_parameters is not None
         for prop in _co_properties:
-            self.CheckTwoPhasePropSpec(property=prop, phaseLabels=phaseLabels)
+            if not self.CheckTwoPhasePropSpec(property=prop, phaseLabels=phaseLabels):
+                self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeLimitedImpl,
+                    description=f"Unsupported two-phase"
+                    f" property ---> {property} <---"
+                    f" with phaseLables ---> {_co_phase_labels} <---",
+                    interfaceName="ICapeThermoPropertyRoutine",
+                    operation="CalcTwoPhaseProp",
+                )
 
         t1, p1, x1 = self._get_tp_fraction(_co_phase_labels[0])
         t2, p2, x2 = self._get_tp_fraction(_co_phase_labels[1])
@@ -295,15 +311,9 @@ class ICapeThermoPropertyRoutine(
         Raises (per spec): ECapeNoImpl, ECapeInvalidArgument, ECapeUnknown.
         """
         if property not in _SINGLE_PHASE_PROPS:
-            self.raise_cape_error(
-                error_cls=ecape_errors.ECapeLimitedImpl,
-                description="Unsupported single-phase"
-                f" property ---> {property} <---"
-                f" with phaseLable ---> {phaseLabel} <---",
-                interfaceName="ICapeThermoPropertyRoutine",
-                operation="CalcSinglePhaseProp",
-            )
+            return False
         self._require_phase_label(phaseLabel=phaseLabel)
+        return True
 
     def CheckTwoPhasePropSpec(
         self, property, phaseLabels  # pylint: disable=redefined-builtin
@@ -333,16 +343,10 @@ class ICapeThermoPropertyRoutine(
                 operation="CalcTwoPhaseProp",
             )
         if property not in _TWO_PHASE_PROPS:
-            self.raise_cape_error(
-                error_cls=ecape_errors.ECapeLimitedImpl,
-                description=f"Unsupported two-phase"
-                f" property ---> {property} <---"
-                f" with phaseLables ---> {_co_phase_labels} <---",
-                interfaceName="ICapeThermoPropertyRoutine",
-                operation="CalcTwoPhaseProp",
-            )
+            return False
         for label in _co_phase_labels:
             self._require_phase_label(label)
+        return True
 
     def GetSinglePhasePropList(self):
         """

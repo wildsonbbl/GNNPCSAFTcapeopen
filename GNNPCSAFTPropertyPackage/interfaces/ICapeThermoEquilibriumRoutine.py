@@ -60,7 +60,18 @@ class ICapeThermoEquilibriumRoutine(
             ECapeLimitedImpl, ECapeInvalidArgument,
             ECapeFailedInitialisation, ECapeUnknown.
         """
-        self.CheckEquilibriumSpec(specification1, specification2, solutionType)
+        if not self.CheckEquilibriumSpec(specification1, specification2, solutionType):
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeLimitedImpl,
+                description="Only TP, Tphasefraction, Pphasefraction"
+                " flash specification is"
+                " implemented by this Property Package."
+                f" Specifications {(specification1, specification2, solutionType)}"
+                " not supported",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CheckEquilibriumSpec",
+            )
+
         spec1 = self._as_list(specification1.value)
         spec2 = self._as_list(specification2.value)
         logging.debug(
@@ -201,16 +212,8 @@ class ICapeThermoEquilibriumRoutine(
             or basis not in ({"none"}, {"none", "mole"})
             or phaselabels not in ({"overall", "vapor"}, {"overall"})
         ):
-            self.raise_cape_error(
-                error_cls=ecape_errors.ECapeLimitedImpl,
-                description="Only TP, Tphasefraction, Pphasefraction"
-                " flash specification is"
-                " implemented by this Property Package."
-                f" Specifications {(specification1, specification2, solutionType)}"
-                " not supported",
-                interfaceName="ICapeThermoEquilibriumRoutine",
-                operation="CheckEquilibriumSpec",
-            )
+            return False
+
         return True
 
     def _compute_bp_or_dp(self, prop, pcsaft_parameters, state, kij_matrix) -> float:
