@@ -384,7 +384,7 @@ class ICapeThermoPropertyRoutine(
         )
 
         if prop == "activityCoefficient":
-            return np.exp(
+            result = np.exp(
                 mix_ln_activity_coefficient(
                     parameters=pcsaft_parameters,
                     state=state,
@@ -392,8 +392,8 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=density_initialization,
                 )
             ).tolist()
-        if prop.lower() == "density":
-            return [
+        elif prop.lower() == "density":
+            result = [
                 mix_den_feos(
                     parameters=pcsaft_parameters,
                     state=state,
@@ -401,22 +401,22 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=density_initialization,
                 )
             ]
-        if prop == "logFugacityCoefficient":
-            return mix_ln_fugacity_coefficient(
+        elif prop == "logFugacityCoefficient":
+            result = mix_ln_fugacity_coefficient(
                 pcsaft_parameters,
                 state,
                 _kij_matrix,
                 density_initialization=density_initialization,
             )
-        if prop == "molecularWeight":
-            return [
+        elif prop == "molecularWeight":
+            result = [
                 sum(
                     frac * params[8]
                     for frac, params in zip(state[2:], pcsaft_parameters)
                 )
             ]
-        if prop.lower() == "enthalpy":
-            return [
+        elif prop.lower() == "enthalpy":
+            result = [
                 mix_r_enthalpy_feos(
                     parameters=pcsaft_parameters,
                     state=state,
@@ -424,8 +424,8 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=density_initialization,
                 )
             ]
-        if prop == "heatCapacityCp":
-            return [
+        elif prop == "heatCapacityCp":
+            result = [
                 mix_r_isobaric_heat_capacity_feos(
                     parameters=pcsaft_parameters,
                     state=state,
@@ -433,19 +433,19 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=density_initialization,
                 )
             ]
-        if prop == "heatCapacityCv":
+        elif prop == "heatCapacityCv":
             state_npt = state_npt_feos(
                 parameters=pcsaft_parameters,
                 state=state,
                 kij_matrix=_kij_matrix,
                 density_initialization=density_initialization,
             )
-            return [
+            result = [
                 state_npt.molar_isochoric_heat_capacity(Contributions.Residual)
                 / (si.JOULE / si.MOL / si.KELVIN)
             ]
-        if prop.lower() == "entropy":
-            return [
+        elif prop.lower() == "entropy":
+            result = [
                 mix_r_entropy_feos(
                     parameters=pcsaft_parameters,
                     state=state,
@@ -453,24 +453,26 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=density_initialization,
                 )
             ]
-        if prop.lower() == "compressibility":
+        elif prop.lower() == "compressibility":
             state_npt = state_npt_feos(
                 parameters=pcsaft_parameters,
                 state=state,
                 kij_matrix=_kij_matrix,
                 density_initialization=density_initialization,
             )
-            return [state_npt.isothermal_compressibility() / (1 / si.PASCAL)]
-        if prop == "compressibilityFactor":
+            result = [state_npt.isothermal_compressibility() / (1 / si.PASCAL)]
+        elif prop == "compressibilityFactor":
             state_npt = state_npt_feos(
                 parameters=pcsaft_parameters,
                 state=state,
                 kij_matrix=_kij_matrix,
                 density_initialization=density_initialization,
             )
-            return [state_npt.compressibility()]
+            result = [state_npt.compressibility()]
+        else:
+            result = [float("nan")]
 
-        return [float("nan")]
+        return result
 
     def _require_phase_label(self, phaseLabel):
         if phaseLabel not in _PHASE_LABELS:
