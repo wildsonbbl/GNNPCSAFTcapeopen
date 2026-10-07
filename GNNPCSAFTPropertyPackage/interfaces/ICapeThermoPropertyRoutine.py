@@ -24,29 +24,23 @@ from . import ecape_errors
 from .utils_common import GNNPCSAFTPPbase
 
 _SINGLE_PHASE_PROPS = (
-    "activityCoefficient",
+    "activitycoefficient",
     "density",
-    "logFugacityCoefficient",
-    "molecularWeight",
+    "logfugacitycoefficient",
+    "molecularweight",
     "enthalpy",
     "entropy",
     "compressibility",
-    "compressibilityFactor",
-    "Density",
-    "Enthalpy",
-    "Entropy",
-    "heatCapacityCp",
-    "heatCapacityCv",
+    "compressibilityfactor",
+    "heatcapacitycp",
+    "heatcapacitycv",
 )
 _SINGLE_PHASE_PROPS_MOLE = (
     "density",
     "enthalpy",
     "entropy",
-    "Density",
-    "Enthalpy",
-    "Entropy",
-    "heatCapacityCp",
-    "heatCapacityCv",
+    "heatcapacitycp",
+    "heatcapacitycv",
 )
 _TWO_PHASE_PROPS = ("kvalue", "logkvalue")
 _PHASE_LABELS = ("Liquid", "Vapor", "Liquid 2")
@@ -157,7 +151,7 @@ class ICapeThermoPropertyRoutine(
 
 
         """
-        _co_properties = self._as_list(props.value)
+        _co_properties = [str(prop).lower() for prop in self._as_list(props.value)]
         for prop in _co_properties:
             if not self.CheckSinglePhasePropSpec(property=prop, phaseLabel=phaseLabel):
                 self.raise_cape_error(
@@ -277,7 +271,7 @@ class ICapeThermoPropertyRoutine(
         for prop in _co_properties:
             if prop.lower() == "logkvalue":
                 computed[prop] = log_kvalue.tolist()
-            elif prop == "kvalue":
+            elif prop.lower() == "kvalue":
                 computed[prop] = np.exp(log_kvalue).tolist()
         for prop, value in computed.items():
             logging.debug("IN CalcTwoPhaseProp ---> %r = %r", prop, value)
@@ -310,7 +304,7 @@ class ICapeThermoPropertyRoutine(
 
         Raises (per spec): ECapeNoImpl, ECapeInvalidArgument, ECapeUnknown.
         """
-        if property not in _SINGLE_PHASE_PROPS:
+        if property.lower() not in _SINGLE_PHASE_PROPS:
             return False
         self._require_phase_label(phaseLabel=phaseLabel)
         return True
@@ -342,7 +336,7 @@ class ICapeThermoPropertyRoutine(
                 interfaceName="ICapeThermoPropertyRoutine",
                 operation="CalcTwoPhaseProp",
             )
-        if property not in _TWO_PHASE_PROPS:
+        if property.lower() not in _TWO_PHASE_PROPS:
             return False
         for label in _co_phase_labels:
             self._require_phase_label(label)
@@ -383,7 +377,7 @@ class ICapeThermoPropertyRoutine(
             "IN CalcSinglePhaseProp ---> requesting %r", (prop, state, phaseLabel)
         )
 
-        if prop == "activityCoefficient":
+        if prop == "activitycoefficient":
             result = np.exp(
                 mix_ln_activity_coefficient(
                     parameters=pcsaft_parameters,
@@ -392,7 +386,7 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=density_initialization,
                 )
             ).tolist()
-        elif prop.lower() == "density":
+        elif prop == "density":
             result = [
                 mix_den_feos(
                     parameters=pcsaft_parameters,
@@ -401,21 +395,21 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=density_initialization,
                 )
             ]
-        elif prop == "logFugacityCoefficient":
+        elif prop == "logfugacitycoefficient":
             result = mix_ln_fugacity_coefficient(
                 pcsaft_parameters,
                 state,
                 _kij_matrix,
                 density_initialization=density_initialization,
             )
-        elif prop == "molecularWeight":
+        elif prop == "molecularweight":
             result = [
                 sum(
                     frac * params[8]
                     for frac, params in zip(state[2:], pcsaft_parameters)
                 )
             ]
-        elif prop.lower() == "enthalpy":
+        elif prop == "enthalpy":
             result = [
                 mix_r_enthalpy_feos(
                     parameters=pcsaft_parameters,
@@ -424,7 +418,7 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=density_initialization,
                 )
             ]
-        elif prop == "heatCapacityCp":
+        elif prop == "heatcapacitycp":
             result = [
                 mix_r_isobaric_heat_capacity_feos(
                     parameters=pcsaft_parameters,
@@ -433,7 +427,7 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=density_initialization,
                 )
             ]
-        elif prop == "heatCapacityCv":
+        elif prop == "heatcapacitycv":
             state_npt = state_npt_feos(
                 parameters=pcsaft_parameters,
                 state=state,
@@ -444,7 +438,7 @@ class ICapeThermoPropertyRoutine(
                 state_npt.molar_isochoric_heat_capacity(Contributions.Residual)
                 / (si.JOULE / si.MOL / si.KELVIN)
             ]
-        elif prop.lower() == "entropy":
+        elif prop == "entropy":
             result = [
                 mix_r_entropy_feos(
                     parameters=pcsaft_parameters,
@@ -453,7 +447,7 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=density_initialization,
                 )
             ]
-        elif prop.lower() == "compressibility":
+        elif prop == "compressibility":
             state_npt = state_npt_feos(
                 parameters=pcsaft_parameters,
                 state=state,
@@ -461,7 +455,7 @@ class ICapeThermoPropertyRoutine(
                 density_initialization=density_initialization,
             )
             result = [state_npt.isothermal_compressibility() / (1 / si.PASCAL)]
-        elif prop == "compressibilityFactor":
+        elif prop == "compressibilityfactor":
             state_npt = state_npt_feos(
                 parameters=pcsaft_parameters,
                 state=state,
