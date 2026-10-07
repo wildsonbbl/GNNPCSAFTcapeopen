@@ -27,6 +27,7 @@ _SINGLE_PHASE_PROPS = (
     "activitycoefficient",
     "density",
     "logfugacitycoefficient",
+    "fugacitycoefficient",
     "molecularweight",
     "enthalpy",
     "entropy",
@@ -402,6 +403,15 @@ class ICapeThermoPropertyRoutine(
                 _kij_matrix,
                 density_initialization=density_initialization,
             )
+        elif prop == "fugacitycoefficient":
+            result = np.exp(
+                mix_ln_fugacity_coefficient(
+                    pcsaft_parameters,
+                    state,
+                    _kij_matrix,
+                    density_initialization=density_initialization,
+                )
+            ).tolist()
         elif prop == "molecularweight":
             result = [
                 sum(
