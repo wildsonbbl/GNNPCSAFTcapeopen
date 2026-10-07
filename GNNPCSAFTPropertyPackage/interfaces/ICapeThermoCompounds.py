@@ -24,27 +24,27 @@ from . import ecape_errors
 from .utils_common import GNNPCSAFTPPbase, OutboundVARIANT
 
 _CONST_PROPS = [
-    "molecularWeight",
-    "SMILESformula",
-    "criticalCompressibilityFactor",
-    "criticalDensity",
-    "criticalVolume",
-    "criticalPressure",
-    "criticalTemperature",
-    "heatOfVaporizationAtNormalBoilingPoint",
-    "liquidDensityAt25C",
-    "liquidVolumeAt25C",
-    "normalBoilingPoint",
+    "molecularweight",
+    "smilesformula",
+    "criticalcompressibilityfactor",
+    "criticaldensity",
+    "criticalvolume",
+    "criticalpressure",
+    "criticaltemperature",
+    "heatofvaporizationatnormalboilingpoint",
+    "liquiddensityat25c",
+    "liquidvolumeat25c",
+    "normalboilingpoint",
 ]
 
 T_PROP_LIST = [
-    "heatCapacityOfLiquid",
-    "heatOfVaporization",
-    "vaporPressure",
-    "volumeOfLiquid",
-    "fugacityCoefficientOfVapor",
-    "volumeChangeUponVaporization",
-    "surfaceTensionSatLiquid",
+    "heatcapacityofliquid",
+    "heatofvaporization",
+    "vaporpressure",
+    "volumeofliquid",
+    "fugacitycoefficientofvapor",
+    "volumechangeuponvaporization",
+    "surfacetensionsatliquid",
 ]
 
 
@@ -72,12 +72,10 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
             ECapeLimitedImpl, ECapeInvalidArgument, ECapeUnknown,
             ECapeBadInvOrder.
         """
-        co_props = copy.deepcopy(props.value)
-        co_compIds = copy.deepcopy(list(compIds.value))
 
-        requested_props = [str(p) for p in self._as_list(co_props)]
+        requested_props = [str(p).lower() for p in self._as_list(props.value)]
         logging.debug("IN GetCompoundConstant ---> requesting %r", (props, compIds))
-        indices = self._compound_indices(co_compIds)
+        indices = self._compound_indices(list(compIds.value))
         pcsaft_parameters = copy.deepcopy(self.pcsaft_parameters)
         components_smiles = copy.deepcopy(self.components_smiles)
         assert pcsaft_parameters is not None
@@ -213,11 +211,9 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
             ECapeInvalidArgument, ECapeOutOfBounds,
             ECapeThrmPropertyNotAvailable, ECapeUnknown, ECapeBadInvOrder.
         """
-        co_props = copy.deepcopy(props.value)
-        co_compIds = copy.deepcopy(compIds.value)
 
-        requested_props = [str(p) for p in self._as_list(co_props)]
-        indices = self._compound_indices(co_compIds)
+        requested_props = [str(p).lower() for p in self._as_list(props.value)]
+        indices = self._compound_indices(list(compIds.value))
         pcsaft_parameters = copy.deepcopy(self.pcsaft_parameters)
         assert pcsaft_parameters is not None
         _propvals: List[float] = []
@@ -234,22 +230,22 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                     operation="GetTDependentProperty",
                 )
             for idx in indices:
-                if key == "vaporPressure":
+                if key == "vaporpressure":
                     _propvals.append(
                         pure_vp_feos(pcsaft_parameters[idx], [temperature])
                     )
-                if key == "volumeOfLiquid":
+                if key == "volumeofliquid":
                     vp = pure_vp_feos(pcsaft_parameters[idx], [temperature])
                     _propvals.append(
                         1 / pure_den_feos(pcsaft_parameters[idx], [temperature, vp])
                     )
-                if key == "heatOfVaporization":
+                if key == "heatofvaporization":
                     h_lv = (
                         pure_h_lv_feos(pcsaft_parameters[idx], [temperature]) * 1000.0
                     )
                     _propvals.append(h_lv)
 
-                if key == "heatCapacityOfLiquid":
+                if key == "heatcapacityofliquid":
                     vle = pure_vle_at_t_feos(
                         parameters=pcsaft_parameters[idx], temperature=temperature
                     )
@@ -257,20 +253,20 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                         Contributions.Residual
                     ) / (si.JOULE / si.MOL / si.KELVIN)
                     _propvals.append(cp)
-                if key == "fugacityCoefficientOfVapor":
+                if key == "fugacitycoefficientofvapor":
                     vle = pure_vle_at_t_feos(
                         parameters=pcsaft_parameters[idx], temperature=temperature
                     )
                     ln_phi = vle.vapor.ln_phi()
                     _propvals.append(math.exp(ln_phi[0]))
-                if key == "volumeChangeUponVaporization":
+                if key == "volumechangeuponvaporization":
                     vle = pure_vle_at_t_feos(
                         parameters=pcsaft_parameters[idx], temperature=temperature
                     )
                     volume_vapor = 1 / vle.vapor.density / (si.METER**3 / si.MOL)
                     volume_liquid = 1 / vle.liquid.density / (si.METER**3 / si.MOL)
                     _propvals.append(volume_vapor - volume_liquid)
-                if key == "surfaceTensionSatLiquid":
+                if key == "surfacetensionsatliquid":
                     st = (
                         pure_surface_tension_at_t_feos(
                             parameters=pcsaft_parameters[idx], temperature=temperature
@@ -315,15 +311,15 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
     def _get_critical_property(self, key, parameter):
         """Helper to compute critical properties."""
         tc, pc, dc = critical_points_feos(parameter)
-        if key == "criticalDensity":
+        if key == "criticaldensity":
             return dc
-        if key == "criticalPressure":
+        if key == "criticalpressure":
             return pc
-        if key == "criticalTemperature":
+        if key == "criticaltemperature":
             return tc
-        if key == "criticalVolume":
+        if key == "criticalvolume":
             return 1 / dc
-        if key == "criticalCompressibilityFactor":
+        if key == "criticalcompressibilityfactor":
             return (
                 pc
                 * (1 / dc)
@@ -338,19 +334,19 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
         Helper to get a single compound constant value to reduce branch
         complexity in GetCompoundConstant.
         """
-        if key == "molecularWeight":
+        if key == "molecularweight":
             return pcsaft_parameters[idx][8]
-        if key == "SMILESformula":
+        if key == "smilesformula":
             return components_smiles[idx]
         if key in (
-            "criticalDensity",
-            "criticalVolume",
-            "criticalPressure",
-            "criticalTemperature",
-            "criticalCompressibilityFactor",
+            "criticaldensity",
+            "criticalvolume",
+            "criticalpressure",
+            "criticaltemperature",
+            "criticalcompressibilityfactor",
         ):
             return self._get_critical_property(key, pcsaft_parameters[idx])
-        if key == "heatOfVaporizationAtNormalBoilingPoint":
+        if key == "heatofvaporizationatnormalboilingpoint":
             vle = pure_vle_at_p_feos(
                 parameters=pcsaft_parameters[idx], pressure=101325.0
             )
@@ -358,11 +354,11 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                 vle.vapor.molar_enthalpy(Contributions.Residual)
                 - vle.liquid.molar_enthalpy(Contributions.Residual)
             ) / (si.JOULE / si.MOL)
-        if key == "liquidDensityAt25C":
+        if key == "liquiddensityat25c":
             return pure_den_feos(pcsaft_parameters[idx], [298.15, 101325.0])
-        if key == "liquidVolumeAt25C":
+        if key == "liquidvolumeat25c":
             return 1 / pure_den_feos(pcsaft_parameters[idx], [298.15, 101325.0])
-        if key == "normalBoilingPoint":
+        if key == "normalboilingpoint":
             return (
                 PhaseEquilibrium.boiling_temperature(
                     pc_saft(parameters=pcsaft_parameters[idx]),
