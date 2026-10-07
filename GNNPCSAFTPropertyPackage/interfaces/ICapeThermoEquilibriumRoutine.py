@@ -23,6 +23,8 @@ from .ICapeThermoPropertyRoutine import (
     ICapeThermoPropertyRoutine,
 )
 
+_FV_SNAP = 1e-5
+
 
 class ICapeThermoEquilibriumRoutine(
     ICapeThermoPropertyRoutine, CAPEOPEN110.ICapeThermoEquilibriumRoutine
@@ -672,9 +674,9 @@ class ICapeThermoEquilibriumRoutine(
     ):
         state = [overall_temperature, overall_pressure, *overall_fractions]
 
-        phaseFraction = material.GetSinglePhaseProp(
-            "phaseFraction", "Vapor", "Mole", None
-        )[0]
+        phaseFraction = _snap_phase_fraction(
+            material.GetSinglePhaseProp("phaseFraction", "Vapor", "Mole", None)[0]
+        )
         logging.debug("IN CalcEquilibrium ---> phaseFraction = %r", phaseFraction)
         if phaseFraction == 1.0:
             material.SetPresentPhases(
@@ -702,7 +704,7 @@ class ICapeThermoEquilibriumRoutine(
                 self.i4_array_variant([CAPEOPEN110.CAPE_ATEQUILIBRIUM]),
             )
 
-        if phaseFraction == 0.0:
+        elif phaseFraction == 0.0:
             material.SetPresentPhases(
                 self.bstr_array_variant(["Liquid"]),
                 self.i4_array_variant([CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS]),
@@ -726,7 +728,7 @@ class ICapeThermoEquilibriumRoutine(
                 self.bstr_array_variant(["Liquid"]),
                 self.i4_array_variant([CAPEOPEN110.CAPE_ATEQUILIBRIUM]),
             )
-        if 0.0 < phaseFraction < 1.0:
+        else:
             material.SetPresentPhases(
                 self.bstr_array_variant(["Vapor", "Liquid"]),
                 self.i4_array_variant(
@@ -779,9 +781,9 @@ class ICapeThermoEquilibriumRoutine(
         material: CAPEOPEN110.ICapeThermoMaterial,
     ):
         state = [overall_temperature, overall_pressure, *overall_fractions]
-        phaseFraction = material.GetSinglePhaseProp(
-            "phaseFraction", "Vapor", "Mole", None
-        )[0]
+        phaseFraction = _snap_phase_fraction(
+            material.GetSinglePhaseProp("phaseFraction", "Vapor", "Mole", None)[0]
+        )
         logging.debug("IN CalcEquilibrium ---> phaseFraction = %r", phaseFraction)
         if phaseFraction == 1.0:
             material.SetPresentPhases(
@@ -809,7 +811,7 @@ class ICapeThermoEquilibriumRoutine(
                 self.bstr_array_variant(["Vapor"]),
                 self.i4_array_variant([CAPEOPEN110.CAPE_ATEQUILIBRIUM]),
             )
-        if phaseFraction == 0.0:
+        elif phaseFraction == 0.0:
             material.SetPresentPhases(
                 self.bstr_array_variant(["Liquid"]),
                 self.i4_array_variant([CAPEOPEN110.CAPE_UNKNOWNPHASESTATUS]),
@@ -835,7 +837,7 @@ class ICapeThermoEquilibriumRoutine(
                 self.bstr_array_variant(["Liquid"]),
                 self.i4_array_variant([CAPEOPEN110.CAPE_ATEQUILIBRIUM]),
             )
-        if 0.0 < phaseFraction < 1.0:
+        else:
             material.SetPresentPhases(
                 self.bstr_array_variant(["Vapor", "Liquid"]),
                 self.i4_array_variant(
@@ -885,3 +887,11 @@ class ICapeThermoEquilibriumRoutine(
 def _is_liquid_like(state, z_max=0.2) -> bool:
     z = state.compressibility()
     return z < z_max
+
+
+def _snap_phase_fraction(fv: float) -> float:
+    if fv >= 1.0 - _FV_SNAP:
+        return 1.0
+    if fv <= _FV_SNAP:
+        return 0.0
+    return fv
