@@ -71,7 +71,7 @@ class ICapeThermoEquilibriumRoutine(
                 f" Specifications {(specification1, specification2, solutionType)}"
                 " not supported",
                 interfaceName="ICapeThermoEquilibriumRoutine",
-                operation="CheckEquilibriumSpec",
+                operation="CalcEquilibrium",
             )
 
         spec1 = self._as_list(specification1.value)
