@@ -225,7 +225,13 @@ class ICapeThermoEquilibriumRoutine(
                 bp, dp = mix_vp_feos(
                     parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
                 )
-            except RuntimeError as exc:
+                if not (math.isfinite(bp) and math.isfinite(dp)):
+                    raise ValueError(f"bubble/dew P not finite: {bp}, {dp}")
+                if not bp > dp:
+                    raise ValueError(
+                        f"no two-phase region at this temperature: Pbubble={bp}, Pdew={dp}"
+                    )
+            except (ValueError, RuntimeError) as exc:
                 return self.raise_cape_error(
                     error_cls=ecape_errors.ECapeSolvingError,
                     description=f"BP/DP calculation failed: {exc}",
@@ -631,9 +637,24 @@ class ICapeThermoEquilibriumRoutine(
         if is_stable:
             logging.debug("STABLE PHASE")
 
-            bp, _dp = mix_vp_feos(
-                parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
-            )
+            try:
+                bp, dp = mix_vp_feos(
+                    parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+                )
+                if not (math.isfinite(bp) and math.isfinite(dp)):
+                    raise ValueError(f"bubble/dew P not finite: {bp}, {dp}")
+                if not bp > dp:
+                    raise ValueError(
+                        f"no two-phase region at this temperature: Pbubble={bp}, Pdew={dp}"
+                    )
+            except (ValueError, RuntimeError) as exc:
+                self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description="Failed to calculate from"
+                    f" overall state = {state}: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                )
             if pressure > bp:
                 stable_phase_label = "Liquid"
             else:
