@@ -23,7 +23,7 @@ from .ICapeThermoPropertyRoutine import (
     ICapeThermoPropertyRoutine,
 )
 
-_FV_SNAP = 1e-5
+_FV_SNAP = 1e-4
 
 
 class ICapeThermoEquilibriumRoutine(
