@@ -388,7 +388,7 @@ class ICapeThermoEquilibriumRoutine(
                 "fraction",
                 phase_label_2,
                 "Mole",
-                self.r8_array_variant(fractions_at_phase),
+                self.r8_array_variant(fractions_at_phase),  # only a placeholder value
             )
             material.SetSinglePhaseProp(
                 "phaseFraction",
