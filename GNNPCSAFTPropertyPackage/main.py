@@ -71,7 +71,7 @@ logging.basicConfig(
     filename=working_dir / "app.log",  # Name of the log file
     filemode="a",  # 'a' to append, 'w' to overwrite
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=os.environ.get("GNNPCSAFTPropertyPackage_LOGLEVEL", "INFO"),
+    level=os.environ.get("GNNPCSAFTPropertyPackage_LOGLEVEL", "CRITICAL"),
 )
 
 
