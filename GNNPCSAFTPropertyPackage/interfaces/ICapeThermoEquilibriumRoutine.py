@@ -2,15 +2,12 @@
 
 import copy
 import logging
-import math
 from typing import List
 
 import si_units as si
 from comtypes.gen import CAPEOPEN110
 from gnnepcsaft.pcsaft.feos.equilibria import (
     is_stable_feos,
-    mix_bp_at_fixed_pressure_feos,
-    mix_dp_at_fixed_pressure_feos,
     mix_ph_flash_feos,
     mix_ps_flash_feos,
     mix_tp_flash_feos,
@@ -22,12 +19,10 @@ from .ICapeThermoPropertyRoutine import (
     ICapeThermoPropertyRoutine,
 )
 from .pc_saft_feos import (
+    compute_bp_or_dp,
+    compute_incipient_fracs,
     find_p_from_phase_fraction,
     find_t_from_phase_fraction,
-    mix_bp_vapor_fracs_at_p_feos,
-    mix_bp_vapor_fracs_at_t_feos,
-    mix_dp_liquid_fracs_at_p_feos,
-    mix_dp_liquid_fracs_at_t_feos,
     solve_enthalpy,
 )
 
@@ -231,131 +226,6 @@ class ICapeThermoEquilibriumRoutine(
             return False
 
         return True
-
-    def _compute_bp_or_dp(self, prop, pcsaft_parameters, state, kij_matrix) -> float:
-
-        if prop in ("dewPointPressure", "bubblePointPressure"):
-            try:
-                bp, dp = mix_vp_feos(
-                    parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
-                )
-                if not (math.isfinite(bp) and math.isfinite(dp)):
-                    raise ValueError(f"bubble/dew P not finite: {bp}, {dp}")
-                if not bp > dp:
-                    raise ValueError(
-                        f"no two-phase region at this temperature: Pbubble={bp}, Pdew={dp}"
-                    )
-            except (ValueError, RuntimeError) as exc:
-                return self.raise_cape_error(
-                    error_cls=ecape_errors.ECapeSolvingError,
-                    description=f"BP/DP calculation failed: {exc}",
-                    interfaceName="ICapeThermoEquilibriumRoutine",
-                    operation="CalcEquilibrium",
-                )
-
-            if prop == "bubblePointPressure":
-                return bp
-            return dp
-        if prop == "dewPointTemperature":
-            try:
-                return mix_dp_at_fixed_pressure_feos(
-                    parameters=pcsaft_parameters,
-                    state=state,
-                    kij_matrix=kij_matrix,
-                )
-
-            except RuntimeError as exc:
-                return self.raise_cape_error(
-                    error_cls=ecape_errors.ECapeSolvingError,
-                    description=f"BP/DP calculation failed: {exc}",
-                    interfaceName="ICapeThermoEquilibriumRoutine",
-                    operation="CalcEquilibrium",
-                )
-        if prop == "bubblePointTemperature":
-            try:
-                return mix_bp_at_fixed_pressure_feos(
-                    parameters=pcsaft_parameters,
-                    state=state,
-                    kij_matrix=kij_matrix,
-                )
-
-            except RuntimeError as exc:
-                return self.raise_cape_error(
-                    error_cls=ecape_errors.ECapeSolvingError,
-                    description=f"BP/DP calculation failed: {exc}",
-                    interfaceName="ICapeThermoEquilibriumRoutine",
-                    operation="CalcEquilibrium",
-                )
-        return self.raise_cape_error(
-            error_cls=ecape_errors.ECapeInvalidArgument,
-            description=f"Invalid prop = {prop} in _compute_bp_or_dp",
-            interfaceName="ICapeThermoEquilibriumRoutine",
-            operation="CalcEquilibrium",
-        )
-
-    def _compute_incipient_fracs(
-        self, prop, pcsaft_parameters, state, kij_matrix
-    ) -> List[float]:
-
-        if prop == "dewPointPressure":
-            try:
-                return mix_dp_liquid_fracs_at_t_feos(
-                    parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
-                )
-            except (ValueError, RuntimeError) as exc:
-                return self.raise_cape_error(
-                    error_cls=ecape_errors.ECapeSolvingError,
-                    description=f"BP/DP calculation failed: {exc}",
-                    interfaceName="ICapeThermoEquilibriumRoutine",
-                    operation="CalcEquilibrium",
-                )
-        if prop == "bubblePointPressure":
-            try:
-                return mix_bp_vapor_fracs_at_t_feos(
-                    parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
-                )
-            except (ValueError, RuntimeError) as exc:
-                return self.raise_cape_error(
-                    error_cls=ecape_errors.ECapeSolvingError,
-                    description=f"BP/DP calculation failed: {exc}",
-                    interfaceName="ICapeThermoEquilibriumRoutine",
-                    operation="CalcEquilibrium",
-                )
-        if prop == "dewPointTemperature":
-            try:
-                return mix_dp_liquid_fracs_at_p_feos(
-                    parameters=pcsaft_parameters,
-                    state=state,
-                    kij_matrix=kij_matrix,
-                )
-            except RuntimeError as exc:
-                return self.raise_cape_error(
-                    error_cls=ecape_errors.ECapeSolvingError,
-                    description=f"BP/DP calculation failed: {exc}",
-                    interfaceName="ICapeThermoEquilibriumRoutine",
-                    operation="CalcEquilibrium",
-                )
-        if prop == "bubblePointTemperature":
-            try:
-                return mix_bp_vapor_fracs_at_p_feos(
-                    parameters=pcsaft_parameters,
-                    state=state,
-                    kij_matrix=kij_matrix,
-                )
-
-            except RuntimeError as exc:
-                return self.raise_cape_error(
-                    error_cls=ecape_errors.ECapeSolvingError,
-                    description=f"BP/DP calculation failed: {exc}",
-                    interfaceName="ICapeThermoEquilibriumRoutine",
-                    operation="CalcEquilibrium",
-                )
-        return self.raise_cape_error(
-            error_cls=ecape_errors.ECapeInvalidArgument,
-            description=f"Invalid prop = {prop} in _compute_bp_or_dp",
-            interfaceName="ICapeThermoEquilibriumRoutine",
-            operation="CalcEquilibrium",
-        )
 
     def _get_flash(self, spec_names: set[str]):
         temperature = self._get_overall_scalar("temperature")
@@ -594,16 +464,10 @@ class ICapeThermoEquilibriumRoutine(
             logging.debug("STABLE PHASE")
 
             try:
-                bp, dp = mix_vp_feos(
+                bp, _dp = mix_vp_feos(
                     parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
                 )
-                if not (math.isfinite(bp) and math.isfinite(dp)):
-                    raise ValueError(f"bubble/dew P not finite: {bp}, {dp}")
-                if not bp > dp:
-                    raise ValueError(
-                        f"no two-phase region at this temperature: Pbubble={bp}, Pdew={dp}"
-                    )
-            except (ValueError, RuntimeError) as exc:
+            except RuntimeError as exc:
                 self.raise_cape_error(
                     error_cls=ecape_errors.ECapeSolvingError,
                     description="Failed to calculate from"
@@ -611,7 +475,7 @@ class ICapeThermoEquilibriumRoutine(
                     interfaceName="ICapeThermoEquilibriumRoutine",
                     operation="CalcEquilibrium",
                 )
-            if pressure > bp:
+            if pressure >= bp:
                 stable_phase_label = "Liquid"
             else:
                 stable_phase_label = "Vapor"
@@ -645,7 +509,7 @@ class ICapeThermoEquilibriumRoutine(
         )
         try:
             flash = self._get_flash(spec_names=spec_names)
-        except (ValueError, RuntimeError) as exc:
+        except RuntimeError as exc:
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeSolvingError,
                 description=f"Flash failed to converge: {exc}",
@@ -692,18 +556,26 @@ class ICapeThermoEquilibriumRoutine(
                 ),
             )
             prop = "dewPointPressure"
-            pressure = self._compute_bp_or_dp(
-                prop=prop,
-                pcsaft_parameters=pcsaft_parameters,
-                state=state,
-                kij_matrix=kij_matrix,
-            )
-            incipient_fractions = self._compute_incipient_fracs(
-                prop=prop,
-                pcsaft_parameters=pcsaft_parameters,
-                state=state,
-                kij_matrix=kij_matrix,
-            )
+            try:
+                pressure = compute_bp_or_dp(
+                    prop=prop,
+                    pcsaft_parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+                incipient_fractions = compute_incipient_fracs(
+                    prop=prop,
+                    pcsaft_parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+            except RuntimeError as exc:
+                self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description=f"BP/DP calculation failed: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                )
 
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, pressure)
             material.SetOverallProp("Pressure", None, self.r8_array_variant([pressure]))
@@ -737,18 +609,26 @@ class ICapeThermoEquilibriumRoutine(
                 ),
             )
             prop = "bubblePointPressure"
-            pressure = self._compute_bp_or_dp(
-                prop=prop,
-                pcsaft_parameters=pcsaft_parameters,
-                state=state,
-                kij_matrix=kij_matrix,
-            )
-            incipient_fractions = self._compute_incipient_fracs(
-                prop=prop,
-                pcsaft_parameters=pcsaft_parameters,
-                state=state,
-                kij_matrix=kij_matrix,
-            )
+            try:
+                pressure = compute_bp_or_dp(
+                    prop=prop,
+                    pcsaft_parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+                incipient_fractions = compute_incipient_fracs(
+                    prop=prop,
+                    pcsaft_parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+            except RuntimeError as exc:
+                self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description=f"BP/DP calculation failed: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                )
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, pressure)
             material.SetOverallProp("Pressure", None, self.r8_array_variant([pressure]))
             self._set_equilibrium_for_stable_phase(
@@ -833,18 +713,26 @@ class ICapeThermoEquilibriumRoutine(
                 ),
             )
             prop = "dewPointTemperature"
-            temperature = self._compute_bp_or_dp(
-                prop=prop,
-                pcsaft_parameters=pcsaft_parameters,
-                state=state,
-                kij_matrix=kij_matrix,
-            )
-            incipient_fractions = self._compute_incipient_fracs(
-                prop=prop,
-                pcsaft_parameters=pcsaft_parameters,
-                state=state,
-                kij_matrix=kij_matrix,
-            )
+            try:
+                temperature = compute_bp_or_dp(
+                    prop=prop,
+                    pcsaft_parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+                incipient_fractions = compute_incipient_fracs(
+                    prop=prop,
+                    pcsaft_parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+            except RuntimeError as exc:
+                self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description=f"BP/DP calculation failed: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                )
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, temperature)
             material.SetOverallProp(
                 "Temperature", None, self.r8_array_variant([temperature])
@@ -878,18 +766,26 @@ class ICapeThermoEquilibriumRoutine(
                 ),
             )
             prop = "bubblePointTemperature"
-            temperature = self._compute_bp_or_dp(
-                prop=prop,
-                pcsaft_parameters=pcsaft_parameters,
-                state=state,
-                kij_matrix=kij_matrix,
-            )
-            incipient_fractions = self._compute_incipient_fracs(
-                prop=prop,
-                pcsaft_parameters=pcsaft_parameters,
-                state=state,
-                kij_matrix=kij_matrix,
-            )
+            try:
+                temperature = compute_bp_or_dp(
+                    prop=prop,
+                    pcsaft_parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+                incipient_fractions = compute_incipient_fracs(
+                    prop=prop,
+                    pcsaft_parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+            except RuntimeError as exc:
+                self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description=f"BP/DP calculation failed: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                )
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, temperature)
             material.SetOverallProp(
                 "Temperature", None, self.r8_array_variant([temperature])

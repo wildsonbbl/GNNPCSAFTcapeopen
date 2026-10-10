@@ -367,3 +367,54 @@ def find_p_from_phase_fraction(
         x_beta1=p_dew,
         phasefraction=phasefraction,
     )
+
+
+def compute_bp_or_dp(prop, pcsaft_parameters, state, kij_matrix) -> float:
+    "compute bubble point or dew point depending on `prop`"
+
+    if prop in ("dewPointPressure", "bubblePointPressure"):
+        bp, dp = mix_vp_feos(
+            parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+        )
+        if prop == "bubblePointPressure":
+            return bp
+        return dp
+    if prop == "dewPointTemperature":
+        return mix_dp_at_fixed_pressure_feos(
+            parameters=pcsaft_parameters,
+            state=state,
+            kij_matrix=kij_matrix,
+        )
+    if prop == "bubblePointTemperature":
+        return mix_bp_at_fixed_pressure_feos(
+            parameters=pcsaft_parameters,
+            state=state,
+            kij_matrix=kij_matrix,
+        )
+    raise RuntimeError(f"Wrong prop ---> {prop}")
+
+
+def compute_incipient_fracs(prop, pcsaft_parameters, state, kij_matrix) -> List[float]:
+    "compute incipient fractions"
+
+    if prop == "dewPointPressure":
+        return mix_dp_liquid_fracs_at_t_feos(
+            parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+        )
+    if prop == "bubblePointPressure":
+        return mix_bp_vapor_fracs_at_t_feos(
+            parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+        )
+    if prop == "dewPointTemperature":
+        return mix_dp_liquid_fracs_at_p_feos(
+            parameters=pcsaft_parameters,
+            state=state,
+            kij_matrix=kij_matrix,
+        )
+    if prop == "bubblePointTemperature":
+        return mix_bp_vapor_fracs_at_p_feos(
+            parameters=pcsaft_parameters,
+            state=state,
+            kij_matrix=kij_matrix,
+        )
+    raise RuntimeError(f"Wrong prop ---> {prop}")
