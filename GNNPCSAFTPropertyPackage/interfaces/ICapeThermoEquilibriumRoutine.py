@@ -16,13 +16,14 @@ from gnnepcsaft.pcsaft.feos.equilibria import (
     mix_tp_flash_feos,
     mix_vp_feos,
 )
-from scipy.optimize import root_scalar
 
 from . import ecape_errors
 from .ICapeThermoPropertyRoutine import (
     ICapeThermoPropertyRoutine,
 )
 from .pc_saft_feos import (
+    find_p_from_phase_fraction,
+    find_t_from_phase_fraction,
     mix_bp_vapor_fracs_at_p_feos,
     mix_bp_vapor_fracs_at_t_feos,
     mix_dp_liquid_fracs_at_p_feos,
@@ -562,133 +563,6 @@ class ICapeThermoEquilibriumRoutine(
         rss_mb = self.rss_mb()
         logging.debug("PROCESS MEMORY: %r MB", rss_mb)
 
-    def _solve_phase_fraction(
-        self,
-        beta_of,
-        x_beta0: float,
-        x_beta1: float,
-        phasefraction: float,
-    ) -> float:
-        """
-        Solve beta_of(x) = phasefraction for x between the two single-phase
-        boundaries x_beta0 (where beta = 0, i.e. the bubble point) and
-        x_beta1 (where beta = 1, i.e. the dew point).
-
-        The boundary values are assigned analytically instead of being
-        flashed, so f(x_beta0) = phasefraction > 0 and
-        f(x_beta1) = phasefraction - 1 < 0 always hold. Every phasefraction
-        strictly inside (0, 1) is therefore guaranteed to be bracketed, no
-        matter how close to 0 or 1 it is or how narrow the boiling range.
-        Only the interior points are flashed.
-        """
-        lo, hi = sorted((x_beta0, x_beta1))
-        direction = 1.0 if x_beta1 > x_beta0 else -1.0  # +1 for T, -1 for P
-
-        def residual(x: float) -> float:
-            if (x - x_beta0) * direction <= 0.0:
-                return phasefraction  # at or beyond the beta = 0 boundary
-            if (x - x_beta1) * direction >= 0.0:
-                return phasefraction - 1.0  # at or beyond the beta = 1 boundary
-            beta = beta_of(x)
-            # clip: single-phase results from the flash are beta = 0 or 1
-            return phasefraction - min(1.0, max(0.0, beta))
-
-        return root_scalar(
-            f=residual,
-            method="brentq",
-            bracket=[lo, hi],
-            xtol=1e-9,
-            rtol=1e-10,
-            maxiter=200,
-        ).root
-
-    def _find_t_from_phase_fraction(
-        self,
-        state_temperature,
-        state_pressure,
-        overall_fractions,
-        pcsaft_parameters,
-        kij_matrix,
-        phasefraction,
-    ) -> float:
-
-        state = [state_temperature, state_pressure, *overall_fractions]
-        try:
-            t_bubble = mix_bp_at_fixed_pressure_feos(
-                parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
-            )
-            t_dew = mix_dp_at_fixed_pressure_feos(
-                parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
-            )
-            if not (math.isfinite(t_bubble) and math.isfinite(t_dew)):
-                raise ValueError(f"bubble/dew T not finite: {t_bubble}, {t_dew}")
-            if not t_dew > t_bubble:
-                raise ValueError(
-                    f"no two-phase region at this pressure: Tbubble={t_bubble}, Tdew={t_dew}"
-                )
-            return self._solve_phase_fraction(
-                beta_of=lambda temperature: mix_tp_flash_feos(
-                    parameters=pcsaft_parameters,
-                    state=[temperature, state_pressure, *overall_fractions],
-                    kij_matrix=kij_matrix,
-                ).vapor_phase_fraction,
-                x_beta0=t_bubble,
-                x_beta1=t_dew,
-                phasefraction=phasefraction,
-            )
-        except (ValueError, RuntimeError) as exc:
-            return self.raise_cape_error(
-                error_cls=ecape_errors.ECapeSolvingError,
-                description="Failed to calculate from"
-                f" vapor phase fraction = {phasefraction}: {exc}",
-                interfaceName="ICapeThermoEquilibriumRoutine",
-                operation="CalcEquilibrium",
-                moreInfo="Bubble/dew point calculation or the root finding on"
-                " the vapor phase fraction did not converge.",
-            )
-
-    def _find_p_from_phase_fraction(
-        self,
-        state_temperature,
-        state_pressure,
-        overall_fractions,
-        pcsaft_parameters,
-        kij_matrix,
-        phasefraction,
-    ) -> float:
-
-        state = [state_temperature, state_pressure, *overall_fractions]
-        try:
-            p_bubble, p_dew = mix_vp_feos(
-                parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
-            )
-            if not (math.isfinite(p_bubble) and math.isfinite(p_dew)):
-                raise ValueError(f"bubble/dew P not finite: {p_bubble}, {p_dew}")
-            if not p_bubble > p_dew:
-                raise ValueError(
-                    f"no two-phase region at this temperature: Pbubble={p_bubble}, Pdew={p_dew}"
-                )
-            return self._solve_phase_fraction(
-                beta_of=lambda pressure: mix_tp_flash_feos(
-                    parameters=pcsaft_parameters,
-                    state=[state_temperature, pressure, *overall_fractions],
-                    kij_matrix=kij_matrix,
-                ).vapor_phase_fraction,
-                x_beta0=p_bubble,
-                x_beta1=p_dew,
-                phasefraction=phasefraction,
-            )
-        except (ValueError, RuntimeError) as exc:
-            return self.raise_cape_error(
-                error_cls=ecape_errors.ECapeSolvingError,
-                description="Failed to calculate from"
-                f" vapor phase fraction = {phasefraction}: {exc}",
-                interfaceName="ICapeThermoEquilibriumRoutine",
-                operation="CalcEquilibrium",
-                moreInfo="Bubble/dew point calculation or the root finding on"
-                " the vapor phase fraction did not converge.",
-            )
-
     def _tp_equilibrium_logic(
         self,
         spec_names: set[str],
@@ -906,14 +780,25 @@ class ICapeThermoEquilibriumRoutine(
                 ),
             )
 
-            pressure = self._find_p_from_phase_fraction(
-                state_temperature=state[0],
-                state_pressure=state[1],
-                overall_fractions=state[2:],
-                pcsaft_parameters=pcsaft_parameters,
-                kij_matrix=kij_matrix,
-                phasefraction=phaseFraction,
-            )
+            try:
+                pressure = find_p_from_phase_fraction(
+                    state_temperature=state[0],
+                    state_pressure=state[1],
+                    overall_fractions=state[2:],
+                    pcsaft_parameters=pcsaft_parameters,
+                    kij_matrix=kij_matrix,
+                    phasefraction=phaseFraction,
+                )
+            except RuntimeError as exc:
+                return self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description="Failed to calculate from"
+                    f" vapor phase fraction = {phaseFraction}: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                    moreInfo="Bubble/dew point calculation or the root finding on"
+                    " the vapor phase fraction did not converge.",
+                )
             logging.debug("IN CalcEquilibrium ---> Overall Pressure = %r", pressure)
             material.SetOverallProp("Pressure", None, self.r8_array_variant([pressure]))
             self.CalcEquilibrium(
@@ -1038,14 +923,25 @@ class ICapeThermoEquilibriumRoutine(
                 ),
             )
 
-            temperature = self._find_t_from_phase_fraction(
-                state_temperature=state[0],
-                state_pressure=state[1],
-                overall_fractions=state[2:],
-                pcsaft_parameters=pcsaft_parameters,
-                kij_matrix=kij_matrix,
-                phasefraction=phaseFraction,
-            )
+            try:
+                temperature = find_t_from_phase_fraction(
+                    state_temperature=state[0],
+                    state_pressure=state[1],
+                    overall_fractions=state[2:],
+                    pcsaft_parameters=pcsaft_parameters,
+                    kij_matrix=kij_matrix,
+                    phasefraction=phaseFraction,
+                )
+            except RuntimeError as exc:
+                return self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description="Failed to calculate from"
+                    f" vapor phase fraction = {phaseFraction}: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                    moreInfo="Bubble/dew point calculation or the root finding on"
+                    " the vapor phase fraction did not converge.",
+                )
             logging.debug(
                 "IN CalcEquilibrium ---> Overall Temperature = %r", temperature
             )
