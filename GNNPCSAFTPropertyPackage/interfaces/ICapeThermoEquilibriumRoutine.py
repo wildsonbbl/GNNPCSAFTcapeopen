@@ -669,7 +669,7 @@ class ICapeThermoEquilibriumRoutine(
                     kij_matrix=kij_matrix,
                     phasefraction=phaseFraction,
                 )
-            except RuntimeError as exc:
+            except (ValueError, RuntimeError) as exc:
                 return self.raise_cape_error(
                     error_cls=ecape_errors.ECapeSolvingError,
                     description="Failed to calculate from"
@@ -828,7 +828,7 @@ class ICapeThermoEquilibriumRoutine(
                     kij_matrix=kij_matrix,
                     phasefraction=phaseFraction,
                 )
-            except RuntimeError as exc:
+            except (ValueError, RuntimeError) as exc:
                 return self.raise_cape_error(
                     error_cls=ecape_errors.ECapeSolvingError,
                     description="Failed to calculate from"
@@ -862,14 +862,24 @@ class ICapeThermoEquilibriumRoutine(
     ):
         overall_enthalpy = material.GetOverallProp("enthalpy", "Mole", [])[0]
         logging.debug("IN CalcEquilibrium ---> enthalpy = %r", overall_enthalpy)
-        updated_temperature = solve_enthalpy(
-            h=overall_enthalpy,
-            init_temp=overall_temperature,
-            pressure=overall_pressure,
-            fractions=overall_fractions,
-            parameters=pcsaft_parameters,
-            kij_matrix=kij_matrix,
-        )
+        try:
+            updated_temperature = solve_enthalpy(
+                h=overall_enthalpy,
+                init_temp=overall_temperature,
+                pressure=overall_pressure,
+                fractions=overall_fractions,
+                parameters=pcsaft_parameters,
+                kij_matrix=kij_matrix,
+            )
+        except (ValueError, RuntimeError) as exc:
+            return self.raise_cape_error(
+                error_cls=ecape_errors.ECapeSolvingError,
+                description="Failed to calculate from"
+                f" enthalpy = {overall_enthalpy}: {exc}",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CalcEquilibrium",
+            )
+
         logging.debug(
             "IN CalcEquilibrium ---> updated temperature = %r", updated_temperature
         )
