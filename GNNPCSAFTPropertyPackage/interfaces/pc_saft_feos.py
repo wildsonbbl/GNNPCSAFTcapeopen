@@ -217,61 +217,153 @@ class PyPerfectGas:
 def solve_enthalpy(
     h: float, init_temp: float, pressure, fractions, parameters, kij_matrix
 ) -> float:
-    """Find T such that the residual molar enthalpy equals h at fixed P and composition.
+    """Find T such that the equilibrium *residual* molar enthalpy equals h (J/mol)
+    at fixed P and overall composition.
 
-    The direct Newton solver is unstable because FEOS can fail when it steps into a
-    spinodal region. Instead, we sample the residual on a temperature grid, locate a
-    sign change in a valid bracket, and use Brent's method for the final solve.
+    The enthalpy function H(T) used here is continuous across the phase boundary:
+      * T <= T_bubble : residual enthalpy of the single liquid phase
+      * T_bubble < T < T_dew : phase-weighted sum from a TP flash,
+            beta * h_vapor + (1 - beta) * h_liquid
+      * T >= T_dew : residual enthalpy of the single vapor phase
+    The two boundary values are computed once from single-phase states and are
+    assigned analytically (never flashed), so the three regions are selected by
+    comparing h with H(T_bubble) and H(T_dew). Each region is then solved with
+    Brent's method on a bracket that is guaranteed to hold the root.
+
+    Pure components / azeotropes (T_bubble == T_dew): any h between the saturated
+    liquid and vapor enthalpies maps to T_sat, because T and P do not fix the
+    vapor fraction there.
+
+    Raises RuntimeError if no root can be bracketed (e.g. h is not reachable
+    with a residual-only enthalpy, such as h >= 0 in the vapor region).
     """
-    bp = mix_bp_at_fixed_pressure_feos(
-        parameters=parameters,
-        state=[init_temp, pressure, *fractions],
-        kij_matrix=kij_matrix,
-    )
+    j_per_mol = si.JOULE / si.MOL
 
-    def residual(t: float) -> float:
-        phase_init = "liquid" if t <= bp else "vapor"
-        try:
-            npt = state_npt_feos(
-                parameters=parameters,
-                state=[t, pressure, *fractions],
-                kij_matrix=kij_matrix,
-                density_initialization=phase_init,
+    def state_at(t: float) -> List[float]:
+        return [t, pressure, *fractions]
+
+    def single_h(t: float, init: Optional[str]) -> float:
+        npt = state_npt_feos(
+            parameters=parameters,
+            state=state_at(t),
+            kij_matrix=kij_matrix,
+            density_initialization=init,
+        )
+        return npt.molar_enthalpy(Contributions.Residual) / j_per_mol
+
+    def flash_h(t: float) -> float:
+        flash = mix_tp_flash_feos(
+            parameters=parameters, state=state_at(t), kij_matrix=kij_matrix
+        )
+        beta = min(1.0, max(0.0, flash.vapor_phase_fraction))
+        total = 0.0
+        if beta > 0.0:
+            total += (
+                beta * flash.vapor.molar_enthalpy(Contributions.Residual) / j_per_mol
             )
-        except RuntimeError:
-            return np.nan
+        if beta < 1.0:
+            total += (
+                (1.0 - beta)
+                * flash.liquid.molar_enthalpy(Contributions.Residual)
+                / j_per_mol
+            )
+        return total
 
-        value = npt.molar_enthalpy(Contributions.Residual) / (si.JOULE / si.MOL)
-        return h - value
+    def expand(fun, t0: float, direction: float, t_limit: float):
+        """Walk from t0 (where fun*direction <= 0 side is known) until fun changes
+        sign. Returns an ordered bracket [a, b]. direction = -1 walks down in T
+        (fun(t0) >= 0 expected), +1 walks up (fun(t0) <= 0 expected)."""
+        t_prev, step = t0, 5.0
+        for _ in range(80):
+            t_new = t_prev + direction * step
+            if (t_new - t_limit) * direction > 0.0:
+                t_new = t_limit
+            try:
+                f_new = fun(t_new)
+            except RuntimeError as exc:
+                raise RuntimeError(
+                    f"Enthalpy evaluation failed at T={t_new:.2f} K while bracketing"
+                    f" h={h} J/mol at P={pressure} Pa: {exc}"
+                ) from exc
+            if f_new * direction >= 0.0:  # crossed (or hit) the root
+                return sorted((t_prev, t_new))
+            if t_new == t_limit:
+                break
+            t_prev, step = t_new, step * 1.6
+        raise RuntimeError(
+            f"Could not bracket enthalpy h={h} J/mol at P={pressure} Pa. Residual-only"
+            " enthalpy may not reach this value (no ideal-gas contribution)."
+        )
 
-    lo = max(150.0, init_temp - 150.0)
-    hi = init_temp + 250.0
-    sample_t = np.linspace(lo, hi, 400)
-    values = []
-    for t in sample_t:
-        val = residual(t)
-        if np.isfinite(val):
-            values.append((t, val))
+    def brent(fun, bracket) -> float:
+        return root_scalar(
+            f=fun, method="brentq", bracket=bracket, xtol=1e-9, rtol=1e-10, maxiter=200
+        ).root
 
-    if len(values) < 2:
-        raise RuntimeError(f"Could not bracket an enthalpy root near T0={init_temp} K")
+    # --- phase boundaries at this P and composition ---------------------------
+    t_bub = t_dew = None
+    try:
+        t_bub = mix_bp_at_fixed_pressure_feos(
+            parameters=parameters, state=state_at(init_temp), kij_matrix=kij_matrix
+        )
+        t_dew = mix_dp_at_fixed_pressure_feos(
+            parameters=parameters, state=state_at(init_temp), kij_matrix=kij_matrix
+        )
+    except RuntimeError:
+        t_bub = t_dew = None  # no VLE at this P (e.g. supercritical)
 
-    for (t1, v1), (t2, v2) in zip(values, values[1:]):
-        if abs(v1) < 1e-10:
-            return t1
-        if v1 * v2 <= 0.0:
-            return root_scalar(
-                f=residual,
-                method="brentq",
-                bracket=[t1, t2],
-                xtol=1e-9,
-                rtol=1e-10,
-                maxiter=200,
-            ).root
+    if t_bub is None or t_dew is None:
+        # No phase split: single fluid, let FEOS pick the stable density root.
+        def f_fluid(t):
+            return single_h(t, None) - h
 
-    raise RuntimeError(
-        f"No valid enthalpy root found for h={h} kJ/mol near T0={init_temp} K"
-    )
+        lo_t, hi_t = 0.2 * init_temp, init_temp + 1500.0
+        f0 = f_fluid(init_temp)
+        if f0 == 0.0:
+            return init_temp
+        bracket = expand(
+            f_fluid, init_temp, -1.0 if f0 > 0.0 else 1.0, lo_t if f0 > 0.0 else hi_t
+        )
+        return brent(f_fluid, bracket)
+
+    t_bub, t_dew = min(t_bub, t_dew), max(t_bub, t_dew)
+    h_bub = single_h(t_bub, "liquid")  # beta = 0 boundary
+    h_dew = single_h(t_dew, "vapor")  # beta = 1 boundary
+
+    # --- subcooled liquid ------------------------------------------------------
+    if h <= h_bub:
+        if h == h_bub:
+            return t_bub
+
+        def f_liq(t):
+            return single_h(t, "liquid") - h
+
+        bracket = expand(f_liq, t_bub, -1.0, 0.2 * t_bub)
+        return brent(f_liq, bracket)
+
+    # --- superheated vapor -----------------------------------------------------
+    if h >= h_dew:
+        if h == h_dew:
+            return t_dew
+
+        def f_vap(t):
+            return single_h(t, "vapor") - h
+
+        bracket = expand(f_vap, t_dew, 1.0, t_dew + 1500.0)
+        return brent(f_vap, bracket)
+
+    # --- two-phase region: h_bub < h < h_dew -----------------------------------
+    if t_dew - t_bub < 1e-6:
+        return t_bub  # pure component / azeotrope: T is not determined by (P, h)
+
+    def f_two(t: float) -> float:
+        if t <= t_bub:
+            return h_bub - h  # < 0, analytic boundary
+        if t >= t_dew:
+            return h_dew - h  # > 0, analytic boundary
+        return flash_h(t) - h
+
+    return brent(f_two, [t_bub, t_dew])
 
 
 def solve_phase_fraction(
