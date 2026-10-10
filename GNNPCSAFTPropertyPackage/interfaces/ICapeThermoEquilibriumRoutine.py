@@ -22,6 +22,12 @@ from . import ecape_errors
 from .ICapeThermoPropertyRoutine import (
     ICapeThermoPropertyRoutine,
 )
+from .pc_saft_feos import (
+    mix_bp_vapor_fracs_at_p_feos,
+    mix_bp_vapor_fracs_at_t_feos,
+    mix_dp_liquid_fracs_at_p_feos,
+    mix_dp_liquid_fracs_at_t_feos,
+)
 
 _FV_SNAP = 1e-4
 
@@ -279,6 +285,70 @@ class ICapeThermoEquilibriumRoutine(
             operation="CalcEquilibrium",
         )
 
+    def _compute_incipient_fracs(
+        self, prop, pcsaft_parameters, state, kij_matrix
+    ) -> List[float]:
+
+        if prop == "dewPointPressure":
+            try:
+                return mix_dp_liquid_fracs_at_t_feos(
+                    parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+                )
+            except (ValueError, RuntimeError) as exc:
+                return self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description=f"BP/DP calculation failed: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                )
+        if prop == "bubblePointPressure":
+            try:
+                return mix_bp_vapor_fracs_at_t_feos(
+                    parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
+                )
+            except (ValueError, RuntimeError) as exc:
+                return self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description=f"BP/DP calculation failed: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                )
+        if prop == "dewPointTemperature":
+            try:
+                return mix_dp_liquid_fracs_at_p_feos(
+                    parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+            except RuntimeError as exc:
+                return self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description=f"BP/DP calculation failed: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                )
+        if prop == "bubblePointTemperature":
+            try:
+                return mix_bp_vapor_fracs_at_p_feos(
+                    parameters=pcsaft_parameters,
+                    state=state,
+                    kij_matrix=kij_matrix,
+                )
+
+            except RuntimeError as exc:
+                return self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeSolvingError,
+                    description=f"BP/DP calculation failed: {exc}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                )
+        return self.raise_cape_error(
+            error_cls=ecape_errors.ECapeInvalidArgument,
+            description=f"Invalid prop = {prop} in _compute_bp_or_dp",
+            interfaceName="ICapeThermoEquilibriumRoutine",
+            operation="CalcEquilibrium",
+        )
+
     def _get_flash(self, spec_names: set[str]):
         temperature = self._get_overall_scalar("temperature")
         pressure = self._get_overall_scalar("pressure")
@@ -340,7 +410,6 @@ class ICapeThermoEquilibriumRoutine(
         pressure: float,
         fractions_at_phase: List[float],
         phase_label: str,
-        second_phase: bool = False,
     ):
         material = self.material
         assert material is not None
@@ -369,36 +438,40 @@ class ICapeThermoEquilibriumRoutine(
             self.r8_array_variant([1.0]),
         )
 
-        if second_phase:
-            phase_label_2 = "Liquid" if phase_label == "Vapor" else "Vapor"
+    def _set_incipient_phase(
+        self,
+        temperature,
+        pressure,
+        fractions_at_phase,
+        phase_label,
+    ):
+        material = self.material
+        assert material is not None
 
-            material.SetSinglePhaseProp(
-                "temperature",
-                phase_label_2,
-                None,
-                self.r8_array_variant([temperature]),
-            )
-            material.SetSinglePhaseProp(
-                "pressure",
-                phase_label_2,
-                None,
-                self.r8_array_variant([pressure]),
-            )
-            material.SetSinglePhaseProp(
-                "fraction",
-                phase_label_2,
-                "Mole",
-                self.r8_array_variant(fractions_at_phase),  # only a placeholder value
-            )
-            material.SetSinglePhaseProp(
-                "phaseFraction",
-                phase_label_2,
-                "Mole",
-                self.r8_array_variant([0.0]),
-            )
-
-        rss_mb = self.rss_mb()
-        logging.debug("PROCESS MEMORY: %r MB", rss_mb)
+        material.SetSinglePhaseProp(
+            "temperature",
+            phase_label,
+            None,
+            self.r8_array_variant([temperature]),
+        )
+        material.SetSinglePhaseProp(
+            "pressure",
+            phase_label,
+            None,
+            self.r8_array_variant([pressure]),
+        )
+        material.SetSinglePhaseProp(
+            "fraction",
+            phase_label,
+            "Mole",
+            self.r8_array_variant(fractions_at_phase),
+        )
+        material.SetSinglePhaseProp(
+            "phaseFraction",
+            phase_label,
+            "Mole",
+            self.r8_array_variant([0.0]),
+        )
 
     def _set_equilibrium_from_flash(
         self,
@@ -745,6 +818,12 @@ class ICapeThermoEquilibriumRoutine(
                 state=state,
                 kij_matrix=kij_matrix,
             )
+            incipient_fractions = self._compute_incipient_fracs(
+                prop=prop,
+                pcsaft_parameters=pcsaft_parameters,
+                state=state,
+                kij_matrix=kij_matrix,
+            )
 
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, pressure)
             material.SetOverallProp("Pressure", None, self.r8_array_variant([pressure]))
@@ -753,7 +832,12 @@ class ICapeThermoEquilibriumRoutine(
                 pressure=pressure,
                 fractions_at_phase=overall_fractions,
                 phase_label="Vapor",
-                second_phase=True,
+            )
+            self._set_incipient_phase(
+                temperature=overall_temperature,
+                pressure=pressure,
+                fractions_at_phase=incipient_fractions,
+                phase_label="Liquid",
             )
             material.SetPresentPhases(
                 self.bstr_array_variant(["Vapor", "Liquid"]),
@@ -779,6 +863,12 @@ class ICapeThermoEquilibriumRoutine(
                 state=state,
                 kij_matrix=kij_matrix,
             )
+            incipient_fractions = self._compute_incipient_fracs(
+                prop=prop,
+                pcsaft_parameters=pcsaft_parameters,
+                state=state,
+                kij_matrix=kij_matrix,
+            )
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, pressure)
             material.SetOverallProp("Pressure", None, self.r8_array_variant([pressure]))
             self._set_equilibrium_for_stable_phase(
@@ -786,7 +876,12 @@ class ICapeThermoEquilibriumRoutine(
                 pressure=pressure,
                 fractions_at_phase=overall_fractions,
                 phase_label="Liquid",
-                second_phase=True,
+            )
+            self._set_incipient_phase(
+                temperature=overall_temperature,
+                pressure=pressure,
+                fractions_at_phase=incipient_fractions,
+                phase_label="Vapor",
             )
             material.SetPresentPhases(
                 self.bstr_array_variant(["Vapor", "Liquid"]),
@@ -868,6 +963,12 @@ class ICapeThermoEquilibriumRoutine(
                 state=state,
                 kij_matrix=kij_matrix,
             )
+            incipient_fractions = self._compute_incipient_fracs(
+                prop=prop,
+                pcsaft_parameters=pcsaft_parameters,
+                state=state,
+                kij_matrix=kij_matrix,
+            )
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, temperature)
             material.SetOverallProp(
                 "Temperature", None, self.r8_array_variant([temperature])
@@ -877,7 +978,12 @@ class ICapeThermoEquilibriumRoutine(
                 pressure=overall_pressure,
                 fractions_at_phase=overall_fractions,
                 phase_label="Vapor",
-                second_phase=True,
+            )
+            self._set_incipient_phase(
+                temperature=temperature,
+                pressure=overall_pressure,
+                fractions_at_phase=incipient_fractions,
+                phase_label="Liquid",
             )
             material.SetPresentPhases(
                 self.bstr_array_variant(["Vapor", "Liquid"]),
@@ -902,6 +1008,12 @@ class ICapeThermoEquilibriumRoutine(
                 state=state,
                 kij_matrix=kij_matrix,
             )
+            incipient_fractions = self._compute_incipient_fracs(
+                prop=prop,
+                pcsaft_parameters=pcsaft_parameters,
+                state=state,
+                kij_matrix=kij_matrix,
+            )
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, temperature)
             material.SetOverallProp(
                 "Temperature", None, self.r8_array_variant([temperature])
@@ -911,7 +1023,12 @@ class ICapeThermoEquilibriumRoutine(
                 pressure=overall_pressure,
                 fractions_at_phase=overall_fractions,
                 phase_label="Liquid",
-                second_phase=True,
+            )
+            self._set_incipient_phase(
+                temperature=temperature,
+                pressure=overall_pressure,
+                fractions_at_phase=incipient_fractions,
+                phase_label="Vapor",
             )
             material.SetPresentPhases(
                 self.bstr_array_variant(["Vapor", "Liquid"]),
