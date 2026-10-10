@@ -27,6 +27,7 @@ from .pc_saft_feos import (
     mix_bp_vapor_fracs_at_t_feos,
     mix_dp_liquid_fracs_at_p_feos,
     mix_dp_liquid_fracs_at_t_feos,
+    solve_enthalpy,
 )
 
 _FV_SNAP = 1e-4
@@ -112,7 +113,6 @@ class ICapeThermoEquilibriumRoutine(
         logging.debug("IN CalcEquilibrium ---> spec_names = %s", spec_names)
 
         if spec_names == {"temperature", "pressure"}:
-
             return self._tp_equilibrium_logic(
                 spec_names=spec_names,
                 pcsaft_parameters=pcsaft_parameters,
@@ -124,7 +124,6 @@ class ICapeThermoEquilibriumRoutine(
             )
         if spec_names == {"temperature", "phasefraction"}:
             return self._tphasefraction_equilibrium_logic(
-                spec_names=spec_names,
                 pcsaft_parameters=pcsaft_parameters,
                 kij_matrix=kij_matrix,
                 overall_temperature=temperature,
@@ -134,7 +133,15 @@ class ICapeThermoEquilibriumRoutine(
             )
         if spec_names == {"pressure", "phasefraction"}:
             return self._pphasefraction_equilibrium_logic(
-                spec_names=spec_names,
+                pcsaft_parameters=pcsaft_parameters,
+                kij_matrix=kij_matrix,
+                overall_temperature=temperature,
+                overall_pressure=pressure,
+                overall_fractions=fractions,
+                material=material,
+            )
+        if spec_names == {"pressure", "enthalpy"}:
+            return self._penthalpy_equilibrium_logic(
                 pcsaft_parameters=pcsaft_parameters,
                 kij_matrix=kij_matrix,
                 overall_temperature=temperature,
@@ -212,7 +219,7 @@ class ICapeThermoEquilibriumRoutine(
                     {"temperature", "pressure"},
                     {"temperature", "phasefraction"},
                     {"pressure", "phasefraction"},
-                    # {"pressure", "enthalpy"}, # needs ideal gas model
+                    {"pressure", "enthalpy"},  # needs ideal gas model
                     # {"pressure", "entropy"}, # needs ideal gas model
                 )
             )
@@ -787,7 +794,6 @@ class ICapeThermoEquilibriumRoutine(
 
     def _tphasefraction_equilibrium_logic(
         self,
-        spec_names: set[str],
         pcsaft_parameters: List[List[float]],
         kij_matrix: List[List[float]],
         overall_temperature: float,
@@ -910,30 +916,15 @@ class ICapeThermoEquilibriumRoutine(
             )
             logging.debug("IN CalcEquilibrium ---> Overall Pressure = %r", pressure)
             material.SetOverallProp("Pressure", None, self.r8_array_variant([pressure]))
-            try:
-                flash = self._get_flash(spec_names=spec_names)
-            except (ValueError, RuntimeError) as exc:
-                self.raise_cape_error(
-                    error_cls=ecape_errors.ECapeSolvingError,
-                    description=f"Flash failed to converge: {exc}",
-                    interfaceName="ICapeThermoEquilibriumRoutine",
-                    operation="CalcEquilibrium",
-                )
-            self._set_equilibrium_from_flash(flash=flash)
-            material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                    ]
-                ),
+            self.CalcEquilibrium(
+                self.bstr_array_variant(["Temperature", "none", "Overall"]),
+                self.bstr_array_variant(["Pressure", "none", "Overall"]),
+                "Unspecified",
             )
         return 0
 
     def _pphasefraction_equilibrium_logic(
         self,
-        spec_names: set[str],
         pcsaft_parameters: List[List[float]],
         kij_matrix: List[List[float]],
         overall_temperature: float,
@@ -1061,25 +1052,43 @@ class ICapeThermoEquilibriumRoutine(
             material.SetOverallProp(
                 "Temperature", None, self.r8_array_variant([temperature])
             )
-            try:
-                flash = self._get_flash(spec_names=spec_names)
-            except (ValueError, RuntimeError) as exc:
-                self.raise_cape_error(
-                    error_cls=ecape_errors.ECapeSolvingError,
-                    description=f"Flash failed to converge: {exc}",
-                    interfaceName="ICapeThermoEquilibriumRoutine",
-                    operation="CalcEquilibrium",
-                )
-            self._set_equilibrium_from_flash(flash=flash)
-            material.SetPresentPhases(
-                self.bstr_array_variant(["Vapor", "Liquid"]),
-                self.i4_array_variant(
-                    [
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                        CAPEOPEN110.CAPE_ATEQUILIBRIUM,
-                    ]
-                ),
+            self.CalcEquilibrium(
+                self.bstr_array_variant(["Temperature", "none", "Overall"]),
+                self.bstr_array_variant(["Pressure", "none", "Overall"]),
+                "Unspecified",
             )
+        return 0
+
+    def _penthalpy_equilibrium_logic(
+        self,
+        pcsaft_parameters: List[List[float]],
+        kij_matrix: List[List[float]],
+        overall_temperature: float,
+        overall_pressure: float,
+        overall_fractions: List[float],
+        material: CAPEOPEN110.ICapeThermoMaterial,
+    ):
+        overall_enthalpy = material.GetOverallProp("enthalpy", "Mole", [])[0]
+        logging.debug("IN CalcEquilibrium ---> enthalpy = %r", overall_enthalpy)
+        updated_temperature = solve_enthalpy(
+            h=overall_enthalpy,
+            init_temp=overall_temperature,
+            pressure=overall_pressure,
+            fractions=overall_fractions,
+            parameters=pcsaft_parameters,
+            kij_matrix=kij_matrix,
+        )
+        logging.debug(
+            "IN CalcEquilibrium ---> updated temperature = %r", updated_temperature
+        )
+        material.SetOverallProp(
+            "Temperature", None, self.r8_array_variant([updated_temperature])
+        )
+        self.CalcEquilibrium(
+            self.bstr_array_variant(["Temperature", "none", "Overall"]),
+            self.bstr_array_variant(["Pressure", "none", "Overall"]),
+            "Unspecified",
+        )
         return 0
 
 
