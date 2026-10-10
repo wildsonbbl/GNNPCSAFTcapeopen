@@ -68,7 +68,7 @@ class ICapeThermoEquilibriumRoutine(
         if not self.CheckEquilibriumSpec(specification1, specification2, solutionType):
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeLimitedImpl,
-                description="Only TP, Tphasefraction, Pphasefraction"
+                description="Only TP, Tphasefraction, Pphasefraction, and PH"
                 " flash specification is"
                 " implemented by this Property Package."
                 f" Specifications {(specification1, specification2, solutionType)}"
@@ -147,7 +147,7 @@ class ICapeThermoEquilibriumRoutine(
             )
         return self.raise_cape_error(
             error_cls=ecape_errors.ECapeLimitedImpl,
-            description="Only TP, Tphasefraction, Pphasefraction"
+            description="Only TP, Tphasefraction, Pphasefraction, and PH"
             " flash specification is"
             " implemented by this Property Package."
             f" Specifications {(specification1, specification2, solutionType)}"
@@ -268,7 +268,7 @@ class ICapeThermoEquilibriumRoutine(
                 )
             return self.raise_cape_error(
                 error_cls=ecape_errors.ECapeLimitedImpl,
-                description="Only TP, Tphasefraction, Pphasefraction"
+                description="Only TP, Tphasefraction, Pphasefraction, and PH"
                 " flash specification is "
                 "implemented by this Property Package",
                 interfaceName="ICapeThermoEquilibriumRoutine",
