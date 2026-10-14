@@ -342,14 +342,21 @@ class GNNPCSAFTPPbase(ECapeUser):
         self.pcsaft_parameters/self._kij_matrix were built in."""
         assert self.components_smiles is not None
 
-        material_ids = list(self.components_smiles)
+        assert self.material is not None
+        material_icapethermocompounds = self.material.QueryInterface(
+            CAPEOPEN110.ICapeThermoCompounds
+        )
+        material_ids = material_icapethermocompounds.GetCompoundList(
+            [], [], [], [], [], []
+        )[0]
+
         if len(material_ids) != len(self.components_smiles):
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeInvalidArgument,
-                description="The Material Object's compound list does not match the "
-                "compounds configured on this Property Package",
-                interfaceName="ICapeThermoPropertyRoutine",
-                operation="CalcSinglePhaseProp",
+                description="The Material Object's compound list does not match the"
+                " compounds configured on this Property Package",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CalcEquilibrium",
             )
         lower_names = [n.lower() for n in self.components_smiles]
         order = []
@@ -359,10 +366,10 @@ class GNNPCSAFTPPbase(ECapeUser):
             except ValueError:
                 self.raise_cape_error(
                     error_cls=ecape_errors.ECapeInvalidArgument,
-                    description=f"Material compound {cid!r} is not configured on this "
-                    "Property Package",
-                    interfaceName="ICapeThermoPropertyRoutine",
-                    operation="CalcSinglePhaseProp",
+                    description=f"Material compound {cid!r} is not configured on this"
+                    " Property Package",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
                 )
         return order
 
