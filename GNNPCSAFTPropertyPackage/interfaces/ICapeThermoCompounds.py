@@ -138,10 +138,6 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        self._require_components(
-            interfaceName="ICapeThermoCompounds",
-            operation="GetConstPropList",
-        )
         return self.bstr_array_variant(_CONST_PROPS)
 
     def GetNumCompounds(self):
@@ -153,10 +149,6 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        self._require_components(
-            interfaceName="ICapeThermoCompounds",
-            operation="GetNumCompounds",
-        )
         assert self.components_smiles is not None
         return len(self.components_smiles)
 

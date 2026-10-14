@@ -98,7 +98,7 @@ class ICapeThermoPropertyRoutine(
         """
         _moleNumbers = self._as_list(moleNumbers.value)
 
-        self._require_components(
+        self._require_material(
             interfaceName="ICapeThermoPropertyRoutine",
             operation="CalcAndGetLnPhi",
         )
