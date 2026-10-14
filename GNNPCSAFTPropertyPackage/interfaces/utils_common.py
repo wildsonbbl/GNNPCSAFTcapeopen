@@ -131,11 +131,6 @@ class GNNPCSAFTPPbase(ECapeUser):
     # SMILES collection dialog
     # ---------------------------------------------------------------------------
 
-    # A conservative SMILES-character check. This is NOT a validity parser for
-    # SMILES grammar (that's RDKit's job) — it only rejects obviously-wrong
-    # input (empty strings, stray whitespace-only lines) before you hand the
-    # list off to your chemistry backend.
-
     @staticmethod
     def _validate_smiles_syntax(smiles):
         """Cheap sanity check; raises ValueError with a human-readable reason."""
@@ -280,14 +275,9 @@ class GNNPCSAFTPPbase(ECapeUser):
 
         return result["smiles"], result["kij_values"]
 
-        # ---------------------------------------------------------------------------
-        # CAPE-OPEN error handling
-        # ---------------------------------------------------------------------------
-        # CAPE-OPEN errors are communicated on the COM side through IErrorInfo.
-        # We assign each named CAPE-OPEN error from the spec a distinct HRESULT
-        # (any value with the top "severity" bit set works; these are arbitrary but
-        # stable, in the vendor-defined range) and set the description text via
-        # ReportError so a PME reading IErrorInfo.GetDescription() sees the message.
+    # ---------------------------------------------------------------------------
+    # CAPE-OPEN error handling
+    # ---------------------------------------------------------------------------
 
     def raise_cape_error(
         self,
