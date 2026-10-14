@@ -126,6 +126,24 @@ class GNNPCSAFTPPbase(ECapeUser):
                 interfaceName=interfaceName,
                 operation=operation,
             )
+        material_icapethermocompounds = self.material.QueryInterface(
+            CAPEOPEN110.ICapeThermoCompounds
+        )
+        material_ids = list(
+            material_icapethermocompounds.GetCompoundList([], [], [], [], [], [])[0]
+        )
+
+        if material_ids != self.components_smiles:
+            error_message = (
+                f"Material IDs ({material_ids}) don't match"
+                f" Property Package IDs ({self.components_smiles})"
+            )
+            self.raise_cape_error(
+                ecape_errors.ECapeBadInvOrder,
+                error_message,
+                interfaceName=interfaceName,
+                operation=operation,
+            )
 
     # ---------------------------------------------------------------------------
     # SMILES collection dialog
