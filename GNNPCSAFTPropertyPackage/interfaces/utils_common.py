@@ -323,7 +323,7 @@ class GNNPCSAFTPPbase(ECapeUser):
         return (
             float(temperature),
             float(pressure),
-            self._reorder_to_internal(list(fractions)),
+            list(fractions),
         )
 
     def _compound_order(self):
@@ -386,7 +386,7 @@ class GNNPCSAFTPPbase(ECapeUser):
     def _get_overall_fractions(self):
         values = self.material.GetOverallProp("fraction", "Mole")  # type: ignore
         values = self._as_list(values)
-        return self._reorder_to_internal(values)
+        return values
 
     @staticmethod
     def _phase_attr(phase, names):
