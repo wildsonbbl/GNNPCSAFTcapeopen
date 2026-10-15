@@ -295,13 +295,13 @@ class ICapeThermoEquilibriumRoutine(
             "temperature",
             phase_label,
             None,
-            self.r8_array_variant([temperature]),
+            self.r8_array_variant([round(temperature, 4)]),
         )
         material.SetSinglePhaseProp(
             "pressure",
             phase_label,
             None,
-            self.r8_array_variant([pressure]),
+            self.r8_array_variant([round(pressure, 4)]),
         )
         material.SetSinglePhaseProp(
             "fraction",
@@ -330,13 +330,13 @@ class ICapeThermoEquilibriumRoutine(
             "temperature",
             phase_label,
             None,
-            self.r8_array_variant([temperature]),
+            self.r8_array_variant([round(temperature, 4)]),
         )
         material.SetSinglePhaseProp(
             "pressure",
             phase_label,
             None,
-            self.r8_array_variant([pressure]),
+            self.r8_array_variant([round(pressure, 4)]),
         )
         material.SetSinglePhaseProp(
             "fraction",
@@ -385,25 +385,25 @@ class ICapeThermoEquilibriumRoutine(
             "temperature",
             phaselabel2,
             None,
-            self.r8_array_variant([vapor_temperature]),
+            self.r8_array_variant([round(vapor_temperature, 4)]),
         )
         material.SetSinglePhaseProp(
             "temperature",
             "Liquid",
             None,
-            self.r8_array_variant([liquid_temperature]),
+            self.r8_array_variant([round(liquid_temperature, 4)]),
         )
         material.SetSinglePhaseProp(
             "pressure",
             phaselabel2,
             None,
-            self.r8_array_variant([vapor_pressure]),
+            self.r8_array_variant([round(vapor_pressure, 4)]),
         )
         material.SetSinglePhaseProp(
             "pressure",
             "Liquid",
             None,
-            self.r8_array_variant([liquid_pressure]),
+            self.r8_array_variant([round(liquid_pressure, 4)]),
         )
         material.SetSinglePhaseProp(
             "fraction",
@@ -464,7 +464,7 @@ class ICapeThermoEquilibriumRoutine(
             logging.debug("STABLE PHASE")
 
             try:
-                bp, _dp = mix_vp_feos(
+                _bp, dp = mix_vp_feos(
                     parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
                 )
             except RuntimeError as exc:
@@ -475,7 +475,7 @@ class ICapeThermoEquilibriumRoutine(
                     interfaceName="ICapeThermoEquilibriumRoutine",
                     operation="CalcEquilibrium",
                 )
-            if pressure >= bp:
+            if pressure > dp:
                 stable_phase_label = "Liquid"
             else:
                 stable_phase_label = "Vapor"
@@ -578,7 +578,9 @@ class ICapeThermoEquilibriumRoutine(
                 )
 
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, pressure)
-            material.SetOverallProp("Pressure", None, self.r8_array_variant([pressure]))
+            material.SetOverallProp(
+                "Pressure", None, self.r8_array_variant([round(pressure, 4)])
+            )
             self._set_equilibrium_for_stable_phase(
                 temperature=overall_temperature,
                 pressure=pressure,
@@ -630,7 +632,9 @@ class ICapeThermoEquilibriumRoutine(
                     operation="CalcEquilibrium",
                 )
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, pressure)
-            material.SetOverallProp("Pressure", None, self.r8_array_variant([pressure]))
+            material.SetOverallProp(
+                "Pressure", None, self.r8_array_variant([round(pressure, 4)])
+            )
             self._set_equilibrium_for_stable_phase(
                 temperature=overall_temperature,
                 pressure=pressure,
@@ -680,7 +684,9 @@ class ICapeThermoEquilibriumRoutine(
                     " the vapor phase fraction did not converge.",
                 )
             logging.debug("IN CalcEquilibrium ---> Overall Pressure = %r", pressure)
-            material.SetOverallProp("Pressure", None, self.r8_array_variant([pressure]))
+            material.SetOverallProp(
+                "Pressure", None, self.r8_array_variant([round(pressure, 4)])
+            )
             self.CalcEquilibrium(
                 self.bstr_array_variant(["Temperature", "none", "Overall"]),
                 self.bstr_array_variant(["Pressure", "none", "Overall"]),
@@ -735,7 +741,7 @@ class ICapeThermoEquilibriumRoutine(
                 )
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, temperature)
             material.SetOverallProp(
-                "Temperature", None, self.r8_array_variant([temperature])
+                "Temperature", None, self.r8_array_variant([round(temperature, 4)])
             )
             self._set_equilibrium_for_stable_phase(
                 temperature=temperature,
@@ -788,7 +794,7 @@ class ICapeThermoEquilibriumRoutine(
                 )
             logging.debug("IN CalcEquilibrium --->%r = %r", prop, temperature)
             material.SetOverallProp(
-                "Temperature", None, self.r8_array_variant([temperature])
+                "Temperature", None, self.r8_array_variant([round(temperature, 4)])
             )
             self._set_equilibrium_for_stable_phase(
                 temperature=temperature,
@@ -842,7 +848,7 @@ class ICapeThermoEquilibriumRoutine(
                 "IN CalcEquilibrium ---> Overall Temperature = %r", temperature
             )
             material.SetOverallProp(
-                "Temperature", None, self.r8_array_variant([temperature])
+                "Temperature", None, self.r8_array_variant([round(temperature, 4)])
             )
             self.CalcEquilibrium(
                 self.bstr_array_variant(["Temperature", "none", "Overall"]),
@@ -884,7 +890,7 @@ class ICapeThermoEquilibriumRoutine(
             "IN CalcEquilibrium ---> updated temperature = %r", updated_temperature
         )
         material.SetOverallProp(
-            "Temperature", None, self.r8_array_variant([updated_temperature])
+            "Temperature", None, self.r8_array_variant([round(updated_temperature, 4)])
         )
         self.CalcEquilibrium(
             self.bstr_array_variant(["Temperature", "none", "Overall"]),
