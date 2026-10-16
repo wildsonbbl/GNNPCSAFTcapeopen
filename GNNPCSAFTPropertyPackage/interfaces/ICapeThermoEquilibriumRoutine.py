@@ -11,7 +11,7 @@ from gnnepcsaft.pcsaft.feos.equilibria import (
     mix_ph_flash_feos,
     mix_ps_flash_feos,
     mix_tp_flash_feos,
-    mix_vp_feos,
+    state_npt_feos,
 )
 
 from . import ecape_errors
@@ -464,7 +464,7 @@ class ICapeThermoEquilibriumRoutine(
             logging.debug("STABLE PHASE")
 
             try:
-                _bp, dp = mix_vp_feos(
+                npt_state = state_npt_feos(
                     parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
                 )
             except RuntimeError as exc:
@@ -475,10 +475,7 @@ class ICapeThermoEquilibriumRoutine(
                     interfaceName="ICapeThermoEquilibriumRoutine",
                     operation="CalcEquilibrium",
                 )
-            if pressure > dp:
-                stable_phase_label = "Liquid"
-            else:
-                stable_phase_label = "Vapor"
+            stable_phase_label = "Liquid" if _is_liquid_like(npt_state) else "Vapor"
 
             material.SetPresentPhases(
                 self.bstr_array_variant([stable_phase_label]),
