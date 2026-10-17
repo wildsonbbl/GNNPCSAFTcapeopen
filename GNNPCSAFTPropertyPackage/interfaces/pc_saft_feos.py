@@ -201,6 +201,36 @@ def state_nph_feos(
     return statenph
 
 
+def critical_state_feos(
+    parameters: List[List[float]],
+    state: List[float],
+    kij_matrix: Optional[List[List[float]]] = None,
+) -> State:
+    """
+    Set up a thermodynamic state at critical conditions.
+
+    Args:
+        parameters: A list of
+         `[m, sigma, epsilon/kB, kappa_ab, epsilon_ab/kB, dipole moment, na, nb, mw]`
+         for each component of the mixture
+        state:
+         A list with `[Initial Temperature (K), mole_fractions_1, mole_fractions_2, ...]`
+        kij_matrix: A matrix of binary interaction parameters
+
+    Returns:
+        out (feos.State): State at critical conditions
+    """
+    t = state[0]  # Temperature, K
+    x = np.asarray(state[1:], dtype=np.float64)  # mole fractions
+    eos = pc_saft_mixture(parameters, kij_matrix=kij_matrix)
+    statenpt = State.critical_point(
+        eos,
+        initial_temperature=t * si.KELVIN,
+        composition=x * si.MOL,
+    )
+    return statenpt
+
+
 class PyPerfectGas:
     """Dummy implementation for an ideal gas with constant heat capacity"""
 
