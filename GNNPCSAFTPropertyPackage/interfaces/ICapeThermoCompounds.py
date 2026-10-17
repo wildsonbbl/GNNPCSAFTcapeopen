@@ -173,6 +173,15 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
             ECapeInvalidArgument, ECapeOutOfBounds,
             ECapeThrmPropertyNotAvailable, ECapeUnknown, ECapeBadInvOrder.
         """
+        self.raise_cape_error(
+            error_cls=ecape_errors.ECapeNoImpl,
+            description=(
+                "This Property Package does not implement pressure-dependent"
+                " pure-compound properties."
+            ),
+            interfaceName="ICapeThermoCompounds",
+            operation="GetPDependentProperty",
+        )
 
     def GetPDependentPropList(self):
         """
@@ -184,7 +193,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        return self.empty_array_variant()
+        return self.bstr_array_variant([])
 
     def GetTDependentProperty(self, props, temperature, compIds, propVals):
         """
@@ -298,7 +307,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
                     error_cls=ecape_errors.ECapeInvalidArgument,
                     description=f"Unrecognised compound identifier: {cid!r}",
                     interfaceName="ICapeThermoCompounds",
-                    operation="GetTDependentPropList",
+                    operation="GetTDependentProperty",
                 )
         return indices
 
