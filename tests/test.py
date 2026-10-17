@@ -39,6 +39,9 @@ class FakeMaterial:
     def SetSinglePhaseProp(self, prop, phase, basis, value):
         self.single_phase_props.append((prop, phase, basis, list(value)))
 
+    def SetTwoPhaseProp(self, prop, phases, basis, value):
+        pass
+
 
 def test_phase_catalog_and_invalid_phase_info():
     phases = object.__new__(ICapeThermoPhases)
