@@ -94,14 +94,6 @@ class ICapeThermoEquilibriumRoutine(
         temperature = self._get_overall_scalar("temperature")
         pressure = self._get_overall_scalar("pressure")
         fractions = self._get_overall_fractions()
-        if 0.0 in fractions:
-            self.raise_cape_error(
-                error_cls=ecape_errors.ECapeFailedInitialisation,
-                description=f"Overall fractions wrongly set to {fractions}."
-                " All components should have at least a residual molar fraction (e.g., 1E-10)",
-                interfaceName="ICapeThermoEquilibriumRoutine",
-                operation="CalcEquilibrium",
-            )
         state = [temperature, pressure, *fractions]
 
         logging.debug("IN CalcEquilibrium ---> state = %s", state)
