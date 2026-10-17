@@ -91,16 +91,13 @@ class ICapeThermoEquilibriumRoutine(
         assert pcsaft_parameters is not None
         assert kij_matrix is not None
 
-        temperature = self._get_overall_scalar("temperature")
-        pressure = self._get_overall_scalar("pressure")
         fractions = self._get_overall_fractions()
-        state = [temperature, pressure, *fractions]
-
-        logging.debug("IN CalcEquilibrium ---> state = %s", state)
         spec_names = {str(spec1[0]).strip().lower(), str(spec2[0]).strip().lower()}
         logging.debug("IN CalcEquilibrium ---> spec_names = %s", spec_names)
 
         if spec_names == {"temperature", "pressure"}:
+            temperature = self._get_overall_scalar("temperature")
+            pressure = self._get_overall_scalar("pressure")
             return self._tp_equilibrium_logic(
                 spec_names=spec_names,
                 pcsaft_parameters=pcsaft_parameters,
@@ -111,6 +108,8 @@ class ICapeThermoEquilibriumRoutine(
                 material=material,
             )
         if spec_names == {"temperature", "phasefraction"}:
+            temperature = self._get_overall_scalar("temperature")
+            pressure = self._get_overall_scalar("pressure", default=101325.0)
             return self._tphasefraction_equilibrium_logic(
                 pcsaft_parameters=pcsaft_parameters,
                 kij_matrix=kij_matrix,
@@ -120,6 +119,8 @@ class ICapeThermoEquilibriumRoutine(
                 material=material,
             )
         if spec_names == {"pressure", "phasefraction"}:
+            temperature = self._get_overall_scalar("temperature", default=300.0)
+            pressure = self._get_overall_scalar("pressure")
             return self._pphasefraction_equilibrium_logic(
                 pcsaft_parameters=pcsaft_parameters,
                 kij_matrix=kij_matrix,
@@ -129,6 +130,8 @@ class ICapeThermoEquilibriumRoutine(
                 material=material,
             )
         if spec_names == {"pressure", "enthalpy"}:
+            temperature = self._get_overall_scalar("temperature", default=300.0)
+            pressure = self._get_overall_scalar("pressure")
             return self._penthalpy_equilibrium_logic(
                 pcsaft_parameters=pcsaft_parameters,
                 kij_matrix=kij_matrix,
@@ -848,7 +851,7 @@ class ICapeThermoEquilibriumRoutine(
         overall_fractions: List[float],
         material: CAPEOPEN110.ICapeThermoMaterial,
     ):
-        overall_enthalpy = material.GetOverallProp("enthalpy", "Mole", [])[0]
+        overall_enthalpy = self._get_overall_scalar("enthalpy", "Mole")
         logging.debug("IN CalcEquilibrium ---> enthalpy = %r", overall_enthalpy)
         try:
             updated_temperature = solve_enthalpy(

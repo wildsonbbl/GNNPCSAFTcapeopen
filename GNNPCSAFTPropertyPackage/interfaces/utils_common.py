@@ -388,21 +388,24 @@ class GNNPCSAFTPPbase(ECapeUser):
             internal[internal_pos] = material_values[material_pos]
         return internal
 
-    def _get_overall_scalar(self, prop, basis=None):
+    def _get_overall_scalar(self, prop, basis=None, default=None):
         try:
             values = self.material.GetOverallProp(prop, basis)  # type: ignore
         except COMError as exc:
-            logging.exception(
-                "Exception caught in _get_overall_scalar for prop = %s",
+            if default is None:
+                self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeThrmPropertyNotAvailable,
+                    description=f"Material Object does not provide {prop!r}",
+                    interfaceName="ICapeThermoEquilibriumRoutine",
+                    operation="CalcEquilibrium",
+                    moreInfo=str(exc),
+                )
+            logging.debug(
+                "Using FEOS starting value %r for missing overall property %s",
+                default,
                 prop,
-                exc_info=exc,
             )
-            if prop == "temperature":
-                values = [300.0]
-            if prop == "pressure":
-                values = [101325.0]
-            else:
-                values = []
+            values = [default]
         values = self._as_list(values)
         if not values:
             self.raise_cape_error(
