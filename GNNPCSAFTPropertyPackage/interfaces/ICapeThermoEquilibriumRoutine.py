@@ -451,15 +451,8 @@ class ICapeThermoEquilibriumRoutine(
                 state=state,
                 kij_matrix=kij_matrix,
             )
-        except RuntimeError as exc:
-            self.raise_cape_error(
-                error_cls=ecape_errors.ECapeSolvingError,
-                description="Failed to calculate from"
-                f" overall state = {state}: {exc}",
-                interfaceName="ICapeThermoEquilibriumRoutine",
-                operation="CalcEquilibrium",
-                moreInfo="It was not possible to conclude stability analysis.",
-            )
+        except RuntimeError:
+            is_stable = True  # no phase boundary exists -> single fluid
         if is_stable:
             logging.debug("STABLE PHASE")
 

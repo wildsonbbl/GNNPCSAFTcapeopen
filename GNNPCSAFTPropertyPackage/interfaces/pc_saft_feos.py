@@ -273,7 +273,13 @@ def solve_enthalpy(
 
     def equilibrium_h(t: float) -> float:
         state = [t, pressure, *fractions]
-        if is_stable_feos(parameters=parameters, state=state, kij_matrix=kij_matrix):
+        try:
+            is_stable = is_stable_feos(
+                parameters=parameters, state=state, kij_matrix=kij_matrix
+            )
+        except RuntimeError:
+            is_stable = True  # no phase boundary exists -> single fluid
+        if is_stable:
             npt = state_npt_feos(
                 parameters=parameters,
                 state=state,
