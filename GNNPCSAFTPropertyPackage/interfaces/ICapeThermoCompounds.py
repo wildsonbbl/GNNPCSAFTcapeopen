@@ -75,7 +75,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
 
         requested_props = [str(p).lower() for p in self._as_list(props.value)]
         logging.debug("IN GetCompoundConstant ---> requesting %r", (props, compIds))
-        indices = self._compound_indices(list(compIds.value))
+        indices = self._compound_indices(None if compIds is None else compIds.value)
         pcsaft_parameters = copy.deepcopy(self.pcsaft_parameters)
         components_smiles = copy.deepcopy(self.components_smiles)
         assert pcsaft_parameters is not None
@@ -125,7 +125,16 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
             self.bstr_array_variant(
                 [f"comp_{idx}" for idx in range(len(self.components_smiles))]
             ),
-            self.r8_array_variant([float("nan")] * len(self.components_smiles)),
+            self.r8_array_variant(
+                [
+                    PhaseEquilibrium.boiling_temperature(
+                        pc_saft(parameters=parameters),
+                        101325.0 * si.PASCAL,
+                    )[0]
+                    / si.KELVIN
+                    for parameters in pcsaft_parameters
+                ]
+            ),
             self.r8_array_variant([parameters[8] for parameters in pcsaft_parameters]),
             self.bstr_array_variant([""] * len(self.components_smiles)),
         )
@@ -215,8 +224,8 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
             ECapeThrmPropertyNotAvailable, ECapeUnknown, ECapeBadInvOrder.
         """
 
-        requested_props = [str(p).lower() for p in self._as_list(props.value)]
-        indices = self._compound_indices(list(compIds.value))
+        requested_props = [str(p).strip().lower() for p in self._as_list(props.value)]
+        indices = self._compound_indices(None if compIds is None else compIds.value)
         pcsaft_parameters = copy.deepcopy(self.pcsaft_parameters)
         assert pcsaft_parameters is not None
         _propvals: List[float] = []
@@ -297,9 +306,12 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
         assert self.components_smiles is not None
         if compIds is None:
             return list(range(len(self.components_smiles)))
+        compIds = self._as_list(compIds)
+        if not compIds:
+            return list(range(len(self.components_smiles)))
         lower_names = [n.lower() for n in self.components_smiles]
         indices = []
-        for cid in self._as_list(compIds):
+        for cid in compIds:
             try:
                 indices.append(lower_names.index(str(cid).lower()))
             except ValueError:

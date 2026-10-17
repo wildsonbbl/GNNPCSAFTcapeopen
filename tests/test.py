@@ -42,6 +42,13 @@ class FakeMaterial:
     def SetTwoPhaseProp(self, prop, phases, basis, value):
         pass
 
+    def GetOverallProp(self, prop, basis=None):
+        if prop == "temperature":
+            return [300.0]
+        if prop == "pressure":
+            return [101325.0]
+        raise RuntimeError(prop)
+
 
 def test_phase_catalog_and_invalid_phase_info():
     phases = object.__new__(ICapeThermoPhases)
@@ -80,6 +87,32 @@ def test_pressure_dependent_properties_report_no_implementation():
         )
 
     assert tuple(compounds.GetPDependentPropList())[0] == None
+
+
+def test_compound_ids_undefined_select_all_compounds():
+    compounds = object.__new__(ICapeThermoCompounds)
+    compounds.components_smiles = ["O", "CCCCO"]
+
+    assert compounds._compound_indices(None) == [0, 1]
+    assert compounds._compound_indices([]) == [0, 1]
+    assert compounds._compound_indices(["ccccO"]) == [1]
+
+
+def test_overall_scalar_only_uses_explicit_feos_defaults(monkeypatch):
+    from comtypes import COMError
+
+    from GNNPCSAFTPropertyPackage.interfaces.utils_common import GNNPCSAFTPPbase
+
+    package = object.__new__(GNNPCSAFTPPbase)
+
+    class MissingMaterial:
+        def GetOverallProp(self, *_args):
+            raise COMError(1, "missing", None)
+
+    package.material = MissingMaterial()
+    assert package._get_overall_scalar("pressure", default=101325.0) == 101325.0
+    with pytest.raises(COMError):
+        package._get_overall_scalar("pressure")
 
 
 def test_single_phase_property_identifiers_are_case_insensitive(monkeypatch):
