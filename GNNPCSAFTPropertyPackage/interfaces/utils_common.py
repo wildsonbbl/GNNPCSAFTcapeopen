@@ -397,8 +397,20 @@ class GNNPCSAFTPPbase(ECapeUser):
                 prop,
                 exc_info=exc,
             )
-            values = [300.0 if prop == "temperature" else 101325.0]
+            if prop == "temperature":
+                values = [300.0]
+            if prop == "pressure":
+                values = [101325.0]
+            else:
+                values = []
         values = self._as_list(values)
+        if not values:
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeThrmPropertyNotAvailable,
+                description=f"Material Object returned no value for {prop!r}",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CalcEquilibrium",
+            )
         return float(values[0])
 
     def _get_overall_fractions(self):
