@@ -66,17 +66,33 @@ class ICapeThermoPhases(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoPhases):
             },
         }
 
-        if phaseLabel in result and phaseAttribute in result[phaseLabel]:
-            return result[phaseLabel][phaseAttribute]
-        return self.raise_cape_error(
-            error_cls=ecape_errors.ECapeInvalidArgument,
-            description=(
-                f"Unknown phase label or phase attribute: "
-                f"{phaseLabel!r}, {phaseAttribute!r}"
-            ),
-            interfaceName="ICapeThermoPhases",
-            operation="GetPhaseInfo",
+        phase = next(
+            (label for label in result if label.lower() == str(phaseLabel).lower()),
+            None,
         )
+        attribute = (
+            next(
+                (
+                    name
+                    for name in result.get(phase, {})
+                    if name.lower() == str(phaseAttribute).lower()
+                ),
+                None,
+            )
+            if phase is not None
+            else None
+        )
+        if phase is None or attribute is None:
+            self.raise_cape_error(
+                error_cls=ecape_errors.ECapeInvalidArgument,
+                description=(
+                    f"Unknown phase label or phase attribute: "
+                    f"{phaseLabel!r}, {phaseAttribute!r}"
+                ),
+                interfaceName="ICapeThermoPhases",
+                operation="GetPhaseInfo",
+            )
+        return result[phase][attribute]
 
     def GetPhaseList(self, phaseLabels, stateOfAggregation, keyCompoundId):
         """
