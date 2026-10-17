@@ -152,7 +152,7 @@ class ICapeThermoPropertyRoutine(
 
 
         """
-        _co_properties = [str(prop).lower() for prop in self._as_list(props.value)]
+        _co_properties = [str(prop).strip().lower() for prop in self._as_list(props.value)]
         for prop in _co_properties:
             if not self.CheckSinglePhasePropSpec(property=prop, phaseLabel=phaseLabel):
                 self.raise_cape_error(
@@ -184,12 +184,9 @@ class ICapeThermoPropertyRoutine(
         # must not leave partial results in the Material Object).
         computed = {}
         for prop in _co_properties:
-            try:
-                computed[prop] = self._compute_single_phase_property(
-                    prop, state, phaseLabel
-                )
-            except Exception as exc:  # pylint:disable=broad-exception-caught
-                logging.exception("IN CalcSinglePhaseProp ---> Exception", exc_info=exc)
+            computed[prop] = self._compute_single_phase_property(
+                prop, state, phaseLabel
+            )
 
         for prop, value in computed.items():
             logging.debug(
