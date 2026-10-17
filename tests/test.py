@@ -76,7 +76,7 @@ def test_pressure_dependent_properties_report_no_implementation():
             None,
         )
 
-    assert tuple(compounds.GetPDependentPropList())[0] == ()
+    assert tuple(compounds.GetPDependentPropList())[0] == None
 
 
 def test_single_phase_property_identifiers_are_case_insensitive(monkeypatch):

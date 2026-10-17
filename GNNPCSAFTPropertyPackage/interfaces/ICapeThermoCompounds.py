@@ -193,7 +193,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        return self.bstr_array_variant([])
+        return self.empty_array_variant()
 
     def GetTDependentProperty(self, props, temperature, compIds, propVals):
         """
