@@ -28,5 +28,5 @@ jobs:
         run: python -c "from comtypes.client import GetModule; GetModule('GNNPCSAFTPropertyPackage/CAPE-OPENv1-1-0.tlb')"
       - name: Analysing the code with pylint
         run: pylint $(git ls-files '*.py') --rcfile=.pylintrc
-      # - name: Unit tests
-      #   run: uv run -m tests.test
+      - name: Unit tests
+        run: pytest tests -v
