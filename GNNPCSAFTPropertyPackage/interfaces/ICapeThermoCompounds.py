@@ -122,7 +122,9 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
         return (
             self.bstr_array_variant(self.components_smiles),
             self.bstr_array_variant([""] * len(self.components_smiles)),
-            self.bstr_array_variant(self.components_smiles),
+            self.bstr_array_variant(
+                [f"comp_{idx}" for idx in range(len(self.components_smiles))]
+            ),
             self.r8_array_variant([float("nan")] * len(self.components_smiles)),
             self.r8_array_variant([parameters[8] for parameters in pcsaft_parameters]),
             self.bstr_array_variant([""] * len(self.components_smiles)),
