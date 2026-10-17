@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           uv pip install -r requirements.txt
-          uv pip install pylint
+          uv pip install pylint pytest
       - name: generate comtypes.gen
         run: python -c "from comtypes.client import GetModule; GetModule('GNNPCSAFTPropertyPackage/CAPE-OPENv1-1-0.tlb')"
       - name: Analysing the code with pylint
