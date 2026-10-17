@@ -1,6 +1,6 @@
 [project]
 name = "GNNPCSAFTPropertyPackage"
-version = "0.2.8"
+version = "0.3.0"
 description = "GNNPCSAFT CAPE-OPEN Property Package"
 authors = [
     {name = "wildsonbbl", email = "wil_bbl@hotmail.com"}
@@ -49,6 +49,9 @@ dev = [
     "ipywidgets",
     "matplotlib",
 ]
+
+[tool.pytest.ini_options]
+python_files = ["test.py", "test_*.py"]
 
 [project.urls]
 Repository = "https://github.com/wildsonbbl/GNNPCSAFTcapeopen"
