@@ -2,6 +2,7 @@
 
 from comtypes.gen import CAPEOPEN110
 
+from . import ecape_errors
 from .utils_common import GNNPCSAFTPPbase
 
 
@@ -67,7 +68,15 @@ class ICapeThermoPhases(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoPhases):
 
         if phaseLabel in result and phaseAttribute in result[phaseLabel]:
             return result[phaseLabel][phaseAttribute]
-        return ""
+        return self.raise_cape_error(
+            error_cls=ecape_errors.ECapeInvalidArgument,
+            description=(
+                f"Unknown phase label or phase attribute: "
+                f"{phaseLabel!r}, {phaseAttribute!r}"
+            ),
+            interfaceName="ICapeThermoPhases",
+            operation="GetPhaseInfo",
+        )
 
     def GetPhaseList(self, phaseLabels, stateOfAggregation, keyCompoundId):
         """
