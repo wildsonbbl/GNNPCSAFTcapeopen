@@ -454,8 +454,20 @@ def find_p_from_phase_fraction(
 
 def compute_bp_or_dp(prop, pcsaft_parameters, state, kij_matrix) -> float:
     "compute bubble point or dew point depending on `prop`"
+    overall_temperature = state[0]
+    overall_pressure = state[1]
+    overall_fractions = state[2:]
+    critical_state = critical_state_feos(
+        parameters=pcsaft_parameters,
+        state=[overall_temperature, *overall_fractions],
+        kij_matrix=kij_matrix,
+    )
+    critical_temperature = critical_state.temperature / si.KELVIN
+    critical_pressure = critical_state.pressure() / si.PASCAL
 
     if prop in ("dewPointPressure", "bubblePointPressure"):
+        if overall_temperature >= critical_temperature:
+            return critical_pressure
         bp, dp = mix_vp_feos(
             parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
         )
@@ -463,12 +475,16 @@ def compute_bp_or_dp(prop, pcsaft_parameters, state, kij_matrix) -> float:
             return bp
         return dp
     if prop == "dewPointTemperature":
+        if overall_pressure >= critical_pressure:
+            return critical_temperature
         return mix_dp_at_fixed_pressure_feos(
             parameters=pcsaft_parameters,
             state=state,
             kij_matrix=kij_matrix,
         )
     if prop == "bubblePointTemperature":
+        if overall_pressure >= critical_pressure:
+            return critical_temperature
         return mix_bp_at_fixed_pressure_feos(
             parameters=pcsaft_parameters,
             state=state,
@@ -479,22 +495,40 @@ def compute_bp_or_dp(prop, pcsaft_parameters, state, kij_matrix) -> float:
 
 def compute_incipient_fracs(prop, pcsaft_parameters, state, kij_matrix) -> List[float]:
     "compute incipient fractions"
+    overall_temperature = state[0]
+    overall_pressure = state[1]
+    overall_fractions = state[2:]
+    critical_state = critical_state_feos(
+        parameters=pcsaft_parameters,
+        state=[overall_temperature, *overall_fractions],
+        kij_matrix=kij_matrix,
+    )
+    critical_temperature = critical_state.temperature / si.KELVIN
+    critical_pressure = critical_state.pressure() / si.PASCAL
 
     if prop == "dewPointPressure":
+        if overall_temperature >= critical_temperature:
+            return overall_fractions
         return mix_dp_liquid_fracs_at_t_feos(
             parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
         )
     if prop == "bubblePointPressure":
+        if overall_temperature >= critical_temperature:
+            return overall_fractions
         return mix_bp_vapor_fracs_at_t_feos(
             parameters=pcsaft_parameters, state=state, kij_matrix=kij_matrix
         )
     if prop == "dewPointTemperature":
+        if overall_pressure >= critical_pressure:
+            return overall_fractions
         return mix_dp_liquid_fracs_at_p_feos(
             parameters=pcsaft_parameters,
             state=state,
             kij_matrix=kij_matrix,
         )
     if prop == "bubblePointTemperature":
+        if overall_pressure >= critical_pressure:
+            return overall_fractions
         return mix_bp_vapor_fracs_at_p_feos(
             parameters=pcsaft_parameters,
             state=state,
