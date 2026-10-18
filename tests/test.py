@@ -103,7 +103,7 @@ def test_overall_scalar_only_uses_explicit_feos_defaults(monkeypatch):
         def GetOverallProp(self, *_args):
             raise COMError(1, "missing", None)
 
-    package.material = MissingMaterial()
+    setattr(package, "material", MissingMaterial())
     assert package._get_overall_scalar("pressure", default=101325.0) == 101325.0
     with pytest.raises(COMError):
         package._get_overall_scalar("pressure")
