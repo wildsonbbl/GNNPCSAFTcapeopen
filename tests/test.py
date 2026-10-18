@@ -16,6 +16,7 @@ from GNNPCSAFTPropertyPackage.interfaces.ICapePersistence import ICapePersistenc
 from GNNPCSAFTPropertyPackage.interfaces.ICapeThermoPropertyRoutine import (
     ICapeThermoPropertyRoutine,
 )
+from GNNPCSAFTPropertyPackage.interfaces.pc_saft_feos import solve_entropy
 from GNNPCSAFTPropertyPackage.interfaces.utils_common import PMCState
 
 
@@ -107,6 +108,30 @@ def test_overall_scalar_only_uses_explicit_feos_defaults(monkeypatch):
     assert package._get_overall_scalar("pressure", default=101325.0) == 101325.0
     with pytest.raises(COMError):
         package._get_overall_scalar("pressure")
+
+
+def test_residual_entropy_solver_inverts_temperature():
+    from feos import Contributions
+    import si_units as si
+    from gnnepcsaft.pcsaft.feos.mixture import state_npt_feos
+    from gnnepcsaft_mcp_server.utils import predict_pcsaft_parameters
+
+    parameters = [predict_pcsaft_parameters("O")]
+    kij_matrix = [[0.0]]
+    state = [300.0, 101325.0, 1.0]
+    entropy = state_npt_feos(
+        parameters=parameters, state=state, kij_matrix=kij_matrix
+    ).molar_entropy(Contributions.Residual)
+    entropy_value = float(entropy / (si.JOULE / si.MOL / si.KELVIN))
+
+    assert solve_entropy(
+        entropy=entropy_value,
+        init_temp=300.0,
+        pressure=101325.0,
+        fractions=[1.0],
+        parameters=parameters,
+        kij_matrix=kij_matrix,
+    ) == pytest.approx(300.0, abs=1e-6)
 
 
 def test_single_phase_property_identifiers_are_case_insensitive(monkeypatch):
