@@ -47,6 +47,8 @@ T_PROP_LIST = [
     "surfacetensionsatliquid",
 ]
 
+P_PROP_LIST = ["boilingpointtemperature"]
+
 
 class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
     "ICapeThermoCompounds Class with methods implemented"
@@ -182,15 +184,30 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
             ECapeInvalidArgument, ECapeOutOfBounds,
             ECapeThrmPropertyNotAvailable, ECapeUnknown, ECapeBadInvOrder.
         """
-        self.raise_cape_error(
-            error_cls=ecape_errors.ECapeNoImpl,
-            description=(
-                "This Property Package does not implement pressure-dependent"
-                " pure-compound properties."
-            ),
-            interfaceName="ICapeThermoCompounds",
-            operation="GetPDependentProperty",
-        )
+        requested_props = [
+            str(prop).strip().lower() for prop in self._as_list(props.value)
+        ]
+        indices = self._compound_indices(None if compIds is None else compIds.value)
+        parameters = copy.deepcopy(self.pcsaft_parameters)
+        assert parameters is not None
+        values = []
+        for prop in requested_props:
+            if prop not in P_PROP_LIST:
+                self.raise_cape_error(
+                    error_cls=ecape_errors.ECapeLimitedImpl,
+                    description=f"Unsupported pressure-dependent property: {prop}",
+                    interfaceName="ICapeThermoCompounds",
+                    operation="GetPDependentProperty",
+                )
+            for idx in indices:
+                values.append(
+                    PhaseEquilibrium.boiling_temperature(
+                        pc_saft(parameters=parameters[idx]),
+                        float(pressure) * si.PASCAL,
+                    )[0]
+                    / si.KELVIN
+                )
+        return self.r8_array_variant(values)
 
     def GetPDependentPropList(self):
         """
@@ -202,7 +219,7 @@ class ICapeThermoCompounds(GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoCompounds):
 
         Raises (per spec): ECapeNoImpl, ECapeUnknown, ECapeBadInvOrder.
         """
-        return self.empty_array_variant()
+        return self.bstr_array_variant(P_PROP_LIST)
 
     def GetTDependentProperty(self, props, temperature, compIds, propVals):
         """

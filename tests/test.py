@@ -75,18 +75,12 @@ def test_universal_constants_are_exposed():
         constants.GetUniversalConstant("notAConstant")
 
 
-def test_pressure_dependent_properties_report_no_implementation():
+def test_pressure_dependent_property_list_is_supported():
     compounds = object.__new__(ICapeThermoCompounds)
 
-    with pytest.raises(Exception):
-        compounds.GetPDependentProperty(
-            variant(["boilingPointTemperature"]),
-            101325.0,
-            variant(["O"]),
-            None,
-        )
-
-    assert tuple(compounds.GetPDependentPropList())[0] == None
+    assert tuple(compounds.GetPDependentPropList())[0] == (
+        "boilingpointtemperature",
+    )
 
 
 def test_compound_ids_undefined_select_all_compounds():
