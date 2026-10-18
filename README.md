@@ -38,6 +38,20 @@ After registering the server, you can use it in any CAPE-OPEN compliant software
 GNNPCSAFTPropertyPackage.exe -unregserver
 ```
 
+### Running the tests
+
+The Python tests run with pytest. When COCO is installed, the supplied
+flowsheets are also solved headlessly through `COFEStand`:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+If COCO is installed in a non-default location, set `COFE_STAND` to the full
+path of `COFEStand.exe`. The thermodynamic calculations currently use residual
+properties only; ideal-gas contributions are not part of the current test
+scope.
+
 ---
 
 ## License
