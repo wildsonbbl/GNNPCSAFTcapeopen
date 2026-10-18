@@ -425,6 +425,108 @@ def solve_enthalpy(
     ).root
 
 
+def solve_entropy(
+    entropy: float, init_temp: float, pressure, fractions, parameters, kij_matrix
+) -> float:
+    """Find T such that residual molar entropy equals ``entropy`` (J/mol/K).
+
+    The calculation deliberately requests ``Contributions.Residual`` because
+    FEOS requires an ideal-gas model for total entropy, which this package does
+    not provide yet.
+    """
+    j_per_mol_kelvin = si.JOULE / si.MOL / si.KELVIN
+
+    def equilibrium_s(t: float) -> float:
+        state = [t, pressure, *fractions]
+        try:
+            is_stable = is_stable_feos(
+                parameters=parameters, state=state, kij_matrix=kij_matrix
+            )
+        except RuntimeError:
+            is_stable = True
+        if is_stable:
+            npt = state_npt_feos(
+                parameters=parameters,
+                state=state,
+                kij_matrix=kij_matrix,
+                density_initialization=None,
+            )
+            return npt.molar_entropy(Contributions.Residual) / j_per_mol_kelvin
+        flash = mix_tp_flash_feos(
+            parameters=parameters, state=state, kij_matrix=kij_matrix
+        )
+        beta = min(1.0, max(0.0, flash.vapor_phase_fraction))
+        total = 0.0
+        if beta > 0.0:
+            total += (
+                beta
+                * flash.vapor.molar_entropy(Contributions.Residual)
+                / j_per_mol_kelvin
+            )
+        if beta < 1.0:
+            total += (
+                (1.0 - beta)
+                * flash.liquid.molar_entropy(Contributions.Residual)
+                / j_per_mol_kelvin
+            )
+        return total
+
+    def f(t: float) -> float:
+        last_exc: Optional[Exception] = None
+        for dt in (0.0, 0.05, -0.05, 0.5, -0.5):
+            try:
+                value = equilibrium_s(t + dt) - entropy
+            except RuntimeError as exc:
+                last_exc = exc
+                continue
+            if np.isfinite(value):
+                return value
+        raise RuntimeError(f"Entropy evaluation failed near T={t:.2f} K: {last_exc}")
+
+    t_min, t_max = 0.2 * init_temp, init_temp + 1500.0
+
+    def bracket_from(t0: float, f0: float, direction: float):
+        t_prev, f_prev, step = t0, f0, 5.0
+        t_limit = t_max if direction > 0 else t_min
+        for _ in range(80):
+            t_new = t_prev + direction * step
+            if (t_new - t_limit) * direction > 0.0:
+                t_new = t_limit
+            f_new = f(t_new)
+            if f_prev * f_new <= 0.0:
+                return sorted((t_prev, t_new))
+            if t_new == t_limit:
+                return None
+            t_prev, f_prev, step = t_new, f_new, step * 1.6
+        return None
+
+    f0 = f(init_temp)
+    if f0 == 0.0:
+        return init_temp
+
+    first = -1.0 if f0 > 0.0 else 1.0
+    bracket = None
+    last_exc: Optional[Exception] = None
+    for direction in (first, -first):
+        try:
+            bracket = bracket_from(init_temp, f0, direction)
+        except RuntimeError as exc:
+            last_exc = exc
+            bracket = None
+        if bracket is not None:
+            break
+    if bracket is None:
+        raise RuntimeError(
+            f"Could not bracket entropy s={entropy} J/mol/K at P={pressure} Pa near"
+            f" T0={init_temp} K (residual-only entropy may not reach this value)."
+            + (f" Last error: {last_exc}" if last_exc else "")
+        )
+
+    return root_scalar(
+        f=f, method="brentq", bracket=bracket, xtol=1e-9, rtol=1e-10, maxiter=200
+    ).root
+
+
 def solve_phase_fraction(
     beta_of,
     x_beta0: float,
