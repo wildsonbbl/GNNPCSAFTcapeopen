@@ -24,6 +24,7 @@ from .pc_saft_feos import (
     find_p_from_phase_fraction,
     find_t_from_phase_fraction,
     solve_enthalpy,
+    solve_entropy,
 )
 
 _FV_SNAP = 1e-4
@@ -68,8 +69,8 @@ class ICapeThermoEquilibriumRoutine(
         if not self.CheckEquilibriumSpec(specification1, specification2, solutionType):
             self.raise_cape_error(
                 error_cls=ecape_errors.ECapeLimitedImpl,
-                description="Only TP, Tphasefraction, Pphasefraction, and PH"
-                " flash specification is"
+                description="Only TP, Tphasefraction, Pphasefraction, PH,"
+                " and PS flash specifications are"
                 " implemented by this Property Package."
                 f" Specifications {(specification1, specification2, solutionType)}"
                 " not supported",
@@ -105,6 +106,17 @@ class ICapeThermoEquilibriumRoutine(
                 temperature=temperature,
                 pressure=pressure,
                 fractions=fractions,
+                material=material,
+            )
+        if spec_names == {"pressure", "entropy"}:
+            temperature = self._get_overall_scalar("temperature", default=300.0)
+            pressure = self._get_overall_scalar("pressure")
+            return self._pentropy_equilibrium_logic(
+                pcsaft_parameters=pcsaft_parameters,
+                kij_matrix=kij_matrix,
+                overall_temperature=temperature,
+                overall_pressure=pressure,
+                overall_fractions=fractions,
                 material=material,
             )
         if spec_names == {"temperature", "phasefraction"}:
@@ -211,7 +223,7 @@ class ICapeThermoEquilibriumRoutine(
                     {"temperature", "phasefraction"},
                     {"pressure", "phasefraction"},
                     {"pressure", "enthalpy"},  # needs ideal gas model
-                    # {"pressure", "entropy"}, # needs ideal gas model
+                    {"pressure", "entropy"},  # needs ideal gas model
                 )
             )
             or soltype not in ("unspecified", "normal")
@@ -263,9 +275,9 @@ class ICapeThermoEquilibriumRoutine(
                 )
             return self.raise_cape_error(
                 error_cls=ecape_errors.ECapeLimitedImpl,
-                description="Only TP, Tphasefraction, Pphasefraction, and PH"
-                " flash specification is "
-                "implemented by this Property Package",
+                description="Only TP, Tphasefraction, Pphasefraction, PH,"
+                " and PS flash specifications are"
+                " implemented by this Property Package",
                 interfaceName="ICapeThermoEquilibriumRoutine",
                 operation="CalcEquilibrium",
             )
@@ -867,6 +879,48 @@ class ICapeThermoEquilibriumRoutine(
                 error_cls=ecape_errors.ECapeSolvingError,
                 description="Failed to calculate from"
                 f" enthalpy = {overall_enthalpy}: {exc}",
+                interfaceName="ICapeThermoEquilibriumRoutine",
+                operation="CalcEquilibrium",
+            )
+
+        logging.debug(
+            "IN CalcEquilibrium ---> updated temperature = %r", updated_temperature
+        )
+        material.SetOverallProp(
+            "Temperature", None, self.r8_array_variant([round(updated_temperature, 4)])
+        )
+        self.CalcEquilibrium(
+            self.bstr_array_variant(["Temperature", "none", "Overall"]),
+            self.bstr_array_variant(["Pressure", "none", "Overall"]),
+            "Unspecified",
+        )
+        return 0
+
+    def _pentropy_equilibrium_logic(
+        self,
+        pcsaft_parameters: List[List[float]],
+        kij_matrix: List[List[float]],
+        overall_temperature: float,
+        overall_pressure: float,
+        overall_fractions: List[float],
+        material: CAPEOPEN110.ICapeThermoMaterial,
+    ):
+        overall_entropy = self._get_overall_scalar("entropy", "Mole")
+        logging.debug("IN CalcEquilibrium ---> entropy = %r", overall_entropy)
+        try:
+            updated_temperature = solve_entropy(
+                entropy=overall_entropy,
+                init_temp=overall_temperature,
+                pressure=overall_pressure,
+                fractions=overall_fractions,
+                parameters=pcsaft_parameters,
+                kij_matrix=kij_matrix,
+            )
+        except (ValueError, RuntimeError) as exc:
+            return self.raise_cape_error(
+                error_cls=ecape_errors.ECapeSolvingError,
+                description="Failed to calculate from"
+                f" entropy = {overall_entropy}: {exc}",
                 interfaceName="ICapeThermoEquilibriumRoutine",
                 operation="CalcEquilibrium",
             )
