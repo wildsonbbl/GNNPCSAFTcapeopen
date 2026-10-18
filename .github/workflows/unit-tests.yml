@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "**.py"
+      - "tests/*.fsd"
+      - ".github/workflows/unit-tests.yml"
 
 jobs:
   tests:
@@ -30,3 +32,47 @@ jobs:
         run: pylint $(git ls-files '*.py') --rcfile=.pylintrc
       - name: Unit tests
         run: uv run pytest tests -v
+
+  coco-integration:
+    name: COCO flowsheet integration
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Locate COFEStand
+        id: coco
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "${env:COFE_STAND}",
+            "C:\Program Files\COCO\x64\COFEStand.exe",
+            "C:\Program Files\COCO\win32\COFEStand.exe"
+          ) | Where-Object { $_ }
+          $path = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if ($path) {
+            "available=true" >> $env:GITHUB_OUTPUT
+            "COFE_STAND=$path" >> $env:GITHUB_ENV
+            Write-Host "Using COFEStand: $path"
+          } else {
+            "available=false" >> $env:GITHUB_OUTPUT
+            Write-Warning "COFEStand.exe is not installed; COCO tests will be skipped."
+          }
+      - name: Install Python and test dependencies
+        if: steps.coco.outputs.available == 'true'
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+          activate-environment: true
+      - name: Install dependencies
+        if: steps.coco.outputs.available == 'true'
+        run: |
+          uv pip install -r requirements.txt
+          uv pip install pytest
+      - name: Generate comtypes bindings
+        if: steps.coco.outputs.available == 'true'
+        run: python -c "from comtypes.client import GetModule; GetModule('GNNPCSAFTPropertyPackage/CAPE-OPENv1-1-0.tlb')"
+      - name: COCO flowsheet tests
+        if: steps.coco.outputs.available == 'true'
+        run: uv run pytest tests/test_coco.py -v
+      - name: Report unavailable COCO
+        if: steps.coco.outputs.available != 'true'
+        run: Write-Host "::notice::COCO integration tests were skipped because COFEStand.exe is unavailable."
