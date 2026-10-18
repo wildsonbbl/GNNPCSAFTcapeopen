@@ -26,6 +26,7 @@ from .utils_common import GNNPCSAFTPPbase
 _SINGLE_PHASE_PROPS = (
     "activitycoefficient",
     "density",
+    "volume",
     "logfugacitycoefficient",
     "fugacitycoefficient",
     "molecularweight",
@@ -38,6 +39,7 @@ _SINGLE_PHASE_PROPS = (
 )
 _SINGLE_PHASE_PROPS_MOLE = (
     "density",
+    "volume",
     "enthalpy",
     "entropy",
     "heatcapacitycp",
@@ -152,7 +154,9 @@ class ICapeThermoPropertyRoutine(
 
 
         """
-        _co_properties = [str(prop).strip().lower() for prop in self._as_list(props.value)]
+        _co_properties = [
+            str(prop).strip().lower() for prop in self._as_list(props.value)
+        ]
         for prop in _co_properties:
             if not self.CheckSinglePhasePropSpec(property=prop, phaseLabel=phaseLabel):
                 self.raise_cape_error(
@@ -370,6 +374,7 @@ class ICapeThermoPropertyRoutine(
         """
         return self.bstr_array_variant(list(_TWO_PHASE_PROPS))
 
+    # pylint: disable=too-many-branches
     def _compute_single_phase_property(
         self, prop: str, state: List[float], phaseLabel: str
     ) -> List[float]:
@@ -399,6 +404,14 @@ class ICapeThermoPropertyRoutine(
                     density_initialization=density_initialization,
                 )
             ]
+        elif prop == "volume":
+            density = mix_den_feos(
+                parameters=pcsaft_parameters,
+                state=state,
+                kij_matrix=_kij_matrix,
+                density_initialization=density_initialization,
+            )
+            result = [1.0 / density]
         elif prop == "logfugacitycoefficient":
             result = mix_ln_fugacity_coefficient(
                 pcsaft_parameters,

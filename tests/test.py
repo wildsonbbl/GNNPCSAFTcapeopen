@@ -79,9 +79,7 @@ def test_universal_constants_are_exposed():
 def test_pressure_dependent_property_list_is_supported():
     compounds = object.__new__(ICapeThermoCompounds)
 
-    assert tuple(compounds.GetPDependentPropList())[0] == (
-        "boilingpointtemperature",
-    )
+    assert tuple(compounds.GetPDependentPropList())[0] == ("boilingpointtemperature",)
 
 
 def test_compound_ids_undefined_select_all_compounds():
@@ -111,8 +109,8 @@ def test_overall_scalar_only_uses_explicit_feos_defaults(monkeypatch):
 
 
 def test_residual_entropy_solver_inverts_temperature():
-    from feos import Contributions
     import si_units as si
+    from feos import Contributions
     from gnnepcsaft.pcsaft.feos.mixture import state_npt_feos
     from gnnepcsaft_mcp_server.utils import predict_pcsaft_parameters
 
@@ -151,6 +149,26 @@ def test_single_phase_property_identifiers_are_case_insensitive(monkeypatch):
     assert routine.CalcSinglePhaseProp(variant(["Density"]), "Liquid") == 0
     assert called == [("density", [300.0, 101325.0, 1.0], "Liquid")]
     assert routine.material.single_phase_props[0][0] == "density"
+
+
+def test_vapor_volume_is_calculated_and_written_as_molar_property(monkeypatch):
+    routine = object.__new__(ICapeThermoPropertyRoutine)
+    routine.material = FakeMaterial()
+    routine.components_smiles = ["O"]
+    routine.pcsaft_parameters = [[1.0] * 9]
+    routine._kij_matrix = [[0.0]]
+
+    monkeypatch.setattr(
+        "GNNPCSAFTPropertyPackage.interfaces.ICapeThermoPropertyRoutine.mix_den_feos",
+        lambda **_kwargs: 2.0,
+    )
+
+    assert routine.CalcSinglePhaseProp(variant(["Volume"]), "Vapor") == 0
+    prop, phase, basis, value = routine.material.single_phase_props[0]
+    assert prop == "volume"
+    assert phase == "Vapor"
+    assert basis == "Mole"
+    assert value[0][0] == pytest.approx(0.5)
 
 
 def test_single_phase_calculation_errors_are_not_silently_discarded(monkeypatch):
