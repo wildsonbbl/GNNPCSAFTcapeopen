@@ -1,4 +1,11 @@
-"Temp pcsaft methods while gnnepcsaft is not updated"
+"""FEOS helpers used by the CAPE-OPEN property package.
+
+The functions in this module adapt PC-SAFT states and phase-equilibrium
+calculations to the units and state-vector conventions used by the property
+package. The enthalpy and entropy inversion helpers deliberately evaluate
+residual contributions; the package does not currently provide an ideal-gas
+model.
+"""
 
 from typing import List, Optional
 
@@ -294,7 +301,12 @@ def critical_state_feos(
 
 
 class PyPerfectGas:
-    """Dummy implementation for an ideal gas with constant heat capacity"""
+    """Minimal constant-heat-capacity ideal-gas model for NPH state setup.
+
+    This helper is used only by :func:`state_nph_feos` to satisfy FEOS's state
+    construction API. It does not add ideal-gas contributions to the
+    residual-only property-package calculations.
+    """
 
     def __init__(self):
         """Dummy implementation for an ideal gas with constant heat capacity"""
@@ -428,11 +440,24 @@ def solve_enthalpy(
 def solve_entropy(
     entropy: float, init_temp: float, pressure, fractions, parameters, kij_matrix
 ) -> float:
-    """Find T such that residual molar entropy equals ``entropy`` (J/mol/K).
+    """Find the temperature whose residual molar entropy equals ``entropy``.
+
+    Args:
+        entropy: Target residual entropy in J/(mol K).
+        init_temp: Initial temperature estimate in K.
+        pressure: Fixed pressure in Pa.
+        fractions: Overall mole fractions.
+        parameters: PC-SAFT parameters, one row per compound.
+        kij_matrix: Binary interaction-parameter matrix.
+
+    Returns:
+        Temperature in K.
 
     The calculation deliberately requests ``Contributions.Residual`` because
-    FEOS requires an ideal-gas model for total entropy, which this package does
-    not provide yet.
+    FEOS requires an ideal-gas model for total entropy, which this package
+    does not provide. Stable states use the stable phase; phase-split states
+    use the phase-fraction-weighted residual entropy and are solved with a
+    bracketed root finder.
     """
     j_per_mol_kelvin = si.JOULE / si.MOL / si.KELVIN
 

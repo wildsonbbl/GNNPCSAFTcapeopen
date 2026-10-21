@@ -5,8 +5,10 @@ comtypes.
 Usage
 -----
     from comtypes.gen import CAPEOPEN110
-    from interfaces.ICapeUtilities import ICapeUtilities
-    from interfaces.ICapePersistence import IPersistStreamInit
+    from GNNPCSAFTPropertyPackage.interfaces.ICapeUtilities import ICapeUtilities
+    from GNNPCSAFTPropertyPackage.interfaces.ICapePersistence import (
+        ICapePersistence,
+    )
 
     class MyPropertyPackage(ICapeUtilities, COMObject):
         _com_interfaces_ = [
@@ -36,7 +38,7 @@ from .utils_common import PMCState
 
 
 class ICapeUtilities(ICapePersistence, CAPEOPEN110.ICapeUtilities):
-    "ICapeUtilities Class with methods implemented"
+    """Implement CAPE-OPEN lifecycle, editing, persistence, and context methods."""
 
     # -- GetParameters -----------------------------------------------------
     def _get_parameters(self):

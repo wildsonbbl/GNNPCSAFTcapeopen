@@ -2,7 +2,7 @@
 CAPE-OPEN Thermo 1.1 property package server for GNN-PC-SAFT.
 
 This implements a CAPE-OPEN 1.1 "Property Package" component, late-bound over
-pywin32 COM (no CAPE-OPEN type library needed at build time, so different
+comtypes COM (the CAPE-OPEN type library is loaded at runtime, so different
 CAPE-OPEN hosts -- COCO, Aspen Plus, gPROMS, etc. -- can all use it).
 
 CAPE-OPEN 1.1 Thermo architecture in one paragraph, for context: a host
@@ -202,7 +202,12 @@ def _delete_key_if_exists(root, path):
 
 
 def main():
-    "Register/Unregister/Run GNNPCSAFTPropertyPackage"
+    """Register, unregister, or run the GNNPCSAFT CAPE-OPEN server.
+
+    ``-regserver`` registers the COM class and CAPE-OPEN category,
+    ``-unregserver`` removes them, and no option starts the normal COM server
+    process.
+    """
     if "-regserver" in sys.argv:
         UseCommandLine(GNNPCSAFTPropertyPackage)
         register_capeopen_category()

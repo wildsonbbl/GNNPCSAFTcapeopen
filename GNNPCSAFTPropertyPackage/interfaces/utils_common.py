@@ -46,7 +46,7 @@ class OutboundVARIANT(VARIANT):
 
 @dataclass
 class PMCState:
-    "PMC lifecycle states"
+    """Lifecycle states of the CAPE-OPEN Property Package Manager Component."""
 
     NON_INITIALIZED = "non_initialized"
     INITIALIZING = "initializing"
@@ -56,7 +56,7 @@ class PMCState:
 
 
 class GNNPCSAFTPPbase(ECapeUser):
-    "ICapeIdentification Class with methods implemented"
+    """Shared state, validation, error, and SAFEARRAY helpers for CAPE-OPEN interfaces."""
 
     material: Optional[CAPEOPEN110.ICapeThermoMaterial] = None
     components_smiles: Optional[List[str]] = None
@@ -67,33 +67,33 @@ class GNNPCSAFTPPbase(ECapeUser):
 
     @staticmethod
     def rss_mb():
-        "check process memory"
+        """Return the current process resident memory in MiB."""
         return proc.memory_info().rss / (1024 * 1024)
 
     @staticmethod
     def bstr_array_variant(values: List[str]):
-        "make array with type VT_ARRAY | VT_BSTR"
+        """Pack strings into a COM ``VT_ARRAY | VT_BSTR`` VARIANT."""
         sa = _midlSAFEARRAY(BSTR).from_param(list(values))
         bstr_array = OutboundVARIANT(sa)
         return bstr_array
 
     @staticmethod
     def r8_array_variant(values: List[float]):
-        "make array with type VT_ARRAY | VT_R8"
+        """Pack numbers into a COM ``VT_ARRAY | VT_R8`` VARIANT."""
         sa = array.array("d", list(values))
         r8_array = OutboundVARIANT(sa)
         return r8_array
 
     @staticmethod
     def i4_array_variant(values: List[int]):
-        "make array with type VT_ARRAY | VT_I4"
+        """Pack integers into a COM ``VT_ARRAY | VT_I4`` VARIANT."""
         sa = array.array("l", list(values))
         i4_array = OutboundVARIANT(sa)
         return i4_array
 
     @staticmethod
     def empty_array_variant():
-        "make empty array"
+        """Return an empty outbound COM VARIANT."""
         empty_array = OutboundVARIANT()
         return empty_array
 
@@ -164,7 +164,7 @@ class GNNPCSAFTPPbase(ECapeUser):
         self,
     ) -> Tuple[Optional[List[str]], Optional[List[float]]]:
         """
-        Blocking, modal dialog asking the user for one SMILES strings in the
+        Blocking, modal dialog asking the user for SMILES strings in the
         first line and kij values in the second line.
 
         Returns a list[str] of cleaned SMILES and list[float] of kij,

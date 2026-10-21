@@ -59,7 +59,13 @@ CAPE_MOLE_NUMBERS_DERIVATIVES = 8
 class ICapeThermoPropertyRoutine(
     GNNPCSAFTPPbase, CAPEOPEN110.ICapeThermoPropertyRoutine
 ):
-    "ICapeThermoPropertyRoutine Class with methods implemented"
+    """Calculate supported single-phase and two-phase thermodynamic properties.
+
+    Temperature, pressure, and phase composition are read from the attached
+    Material Object. Enthalpy, entropy, heat capacities, density, and volume
+    currently expose residual-model results; ideal-gas contributions are not
+    implemented.
+    """
 
     # --- ICapeThermoPropertyRoutine ---
     def CalcAndGetLnPhi(
@@ -142,17 +148,12 @@ class ICapeThermoPropertyRoutine(
         )
 
     def CalcSinglePhaseProp(self, props, phaseLabel):
-        """Calculates properties/derivatives that depend on one phase.
+        """Calculate requested properties for one phase and write them back.
 
-        COMMETHOD(
-                [dispid(2), helpstring('method CalcSinglePhaseProp')],
-                HRESULT,
-                'CalcSinglePhaseProp',
-                (['in'], VARIANT, 'props'),
-                (['in'], BSTR, 'phaseLabel')
-            )
-
-
+        The state is read from the attached Material Object. Supported
+        properties include residual density, molar volume, fugacity-related
+        properties, molecular weight, residual enthalpy and entropy, and the
+        implemented heat-capacity and compressibility properties.
         """
         _co_properties = [
             str(prop).strip().lower() for prop in self._as_list(props.value)

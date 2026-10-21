@@ -33,7 +33,7 @@ _FV_SNAP = 1e-4
 class ICapeThermoEquilibriumRoutine(
     ICapeThermoPropertyRoutine, CAPEOPEN110.ICapeThermoEquilibriumRoutine
 ):
-    "ICapeThermoEquilibriumRoutine Class with methods implemented"
+    """Perform supported TP, phase-fraction, residual-PH, and residual-PS calculations."""
 
     # --- ICapeThermoEquilibriumRoutine ---
     def CalcEquilibrium(
@@ -59,8 +59,9 @@ class ICapeThermoEquilibriumRoutine(
             solutionType (CapeString): "Unspecified", "Normal" or
                 "Retrograde".
 
-        Returns: - (results are written back into the Material Object via
-            SetPresentPhases / SetSinglePhaseProp, not returned directly)
+        Results are written back into the Material Object via
+        ``SetPresentPhases`` and ``SetSinglePhaseProp``; the method returns
+        only the COM success code.
 
         Raises (per spec): ECapeNoImpl, ECapeBadInvOrder, ECapeSolvingError,
             ECapeLimitedImpl, ECapeInvalidArgument,
@@ -222,8 +223,10 @@ class ICapeThermoEquilibriumRoutine(
                     {"temperature", "pressure"},
                     {"temperature", "phasefraction"},
                     {"pressure", "phasefraction"},
-                    {"pressure", "enthalpy"},  # needs ideal gas model
-                    {"pressure", "entropy"},  # needs ideal gas model
+                    # Public PH/PS paths invert residual properties instead
+                    # of using FEOS's total-property flash routines.
+                    {"pressure", "enthalpy"},
+                    {"pressure", "entropy"},
                 )
             )
             or soltype not in ("unspecified", "normal")
