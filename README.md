@@ -4,6 +4,9 @@ GNNPCSAFT CAPE-OPEN is a Property Package [CAPE-OPEN](https://www.colan.org/) im
 
 [FeOs](https://github.com/feos-org/feos) is used for PC-SAFT thermodynamic calculations such as VLE. [Comtypes](https://pypi.org/project/comtypes/) is used to implement the CAPE-OPEN COM interfaces. Only Windows is supported for now.
 
+The thermodynamic calculations currently use residual
+properties only. Ideal-gas contributions are not part of the current scope.
+
 Other implementations with GNNPCSAFT:
 
 - [GNNPCSAFT CLI](https://github.com/wildsonbbl/gnnepcsaftcli)
@@ -44,13 +47,11 @@ The Python tests run with pytest. When COCO is installed, the supplied
 flowsheets are also solved headlessly through `COFEStand`:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest -q
+python.exe -m pytest -q
 ```
 
 If COCO is installed in a non-default location, set `COFE_STAND` to the full
-path of `COFEStand.exe`. The thermodynamic calculations currently use residual
-properties only; ideal-gas contributions are not part of the current test
-scope.
+path of `COFEStand.exe`. `ChemSep` is also required for these tests.
 
 ---
 
